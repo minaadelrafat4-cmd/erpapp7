@@ -12,27 +12,17 @@ import { Card } from '@components/Card';
 import { ErrorState } from '@components/ErrorState';
 import { LoadingState } from '@components/LoadingState';
 import { RoleGate } from '@components/RoleGate';
+import { InfoRow, InfoGroup } from '@components/InfoRow';
+import { DetailHeader } from '@components/DetailHeader';
+import { CardSection } from '@components/SectionHeader';
+import { SummaryGrid } from '@components/SummaryGrid';
 import { useThemeStore } from '@store/themeStore';
 import { useCustomerDetail } from '@hooks/useERP';
 import { useResponsive } from '@hooks/useResponsive';
 import { useLocalSearchParams } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getIconName } from '@config/icons';
+import { formatDate } from '@lib/format';
 import { navMinRank } from '@constants';
-import type { IconName, ThemeColors } from '@apptypes';
 import type { CustomerAddress, CustomerOrderSummary } from '@apptypes/erp';
-
-function InfoRow({ label, value, icon, colors }: { label: string; value: string; icon: IconName; colors: ThemeColors }) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLeft}>
-        <MaterialCommunityIcons name={getIconName(icon)} size={18} color={colors.textMuted} />
-        <Text style={[styles.infoLabel, { color: colors.textMuted }]}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{value}</Text>
-    </View>
-  );
-}
 
 export default function CustomerDetailScreen() {
   const { colors } = useThemeStore();
@@ -92,93 +82,84 @@ export default function CustomerDetailScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
         >
           <Card>
-            <View style={styles.headerRow}>
-              <View style={[styles.iconBox, { backgroundColor: colors.surfaceElevated }]}>
-                <Text style={styles.iconText}>{initials}</Text>
-              </View>
-              <View style={styles.headerInfo}>
-                <Text style={[styles.customerName, { color: colors.textPrimary }]}>{fullName}</Text>
-                {customer.email ? (
-                  <Text style={[styles.customerEmail, { color: colors.textMuted }]} numberOfLines={1}>{customer.email}</Text>
-                ) : null}
-              </View>
-            </View>
+            <DetailHeader
+              icon="users"
+              title={fullName}
+              subtitle={customer.email ?? undefined}
+            />
           </Card>
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Contact Information</Text>
-            <View style={styles.infoContainer}>
-              <InfoRow label="Email" value={customer.email ?? '—'} icon="mail" colors={colors} />
-              <InfoRow label="Phone" value={customer.phone ?? '—'} icon="phone" colors={colors} />
-            </View>
+            <CardSection title="Contact Information">
+              <InfoGroup>
+                <InfoRow label="Email" value={customer.email ?? '—'} icon="mail" />
+                <InfoRow label="Phone" value={customer.phone ?? '—'} icon="phone" />
+              </InfoGroup>
+            </CardSection>
           </Card>
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Account Summary</Text>
-            <View style={styles.summaryGrid}>
-              <View style={[styles.summaryItem, { backgroundColor: colors.surfaceElevated }]}>
-                <Text style={[styles.summaryItemLabel, { color: colors.textMuted }]}>Orders</Text>
-                <Text style={[styles.summaryItemValue, { color: colors.textPrimary }]}>{customer.order_count}</Text>
-              </View>
-              <View style={[styles.summaryItem, { backgroundColor: colors.surfaceElevated }]}>
-                <Text style={[styles.summaryItemLabel, { color: colors.textMuted }]}>Total Spent</Text>
-                <Text style={[styles.summaryItemValue, { color: colors.gold }]}>{customer.total_spent ? `$${customer.total_spent.toFixed(2)}` : '—'}</Text>
-              </View>
-              <View style={[styles.summaryItem, { backgroundColor: colors.surfaceElevated }]}>
-                <Text style={[styles.summaryItemLabel, { color: colors.textMuted }]}>Loyalty Points</Text>
-                <Text style={[styles.summaryItemValue, { color: colors.accent }]}>{customer.loyalty_points}</Text>
-              </View>
-            </View>
+            <CardSection title="Account Summary">
+              <SummaryGrid
+                items={[
+                  { label: 'Orders', value: customer.order_count },
+                  { label: 'Total Spent', value: customer.total_spent ? `$${customer.total_spent.toFixed(2)}` : '—', highlight: true, highlightColor: colors.gold },
+                  { label: 'Loyalty Points', value: customer.loyalty_points, highlight: true, highlightColor: colors.accent },
+                ]}
+              />
+            </CardSection>
           </Card>
 
           {customer.addresses.length > 0 && (
             <Card>
-              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Saved Addresses</Text>
-              <View style={styles.infoContainer}>
-                {customer.addresses.map((addr: CustomerAddress) => (
-                  <View key={addr.id} style={styles.addressBlock}>
-                    {addr.is_default && (
-                      <View style={[styles.defaultBadge, { backgroundColor: colors.gold + '20' }]}>
-                        <Text style={[styles.defaultBadgeText, { color: colors.gold }]}>Default</Text>
-                      </View>
-                    )}
-                    <Text style={[styles.addressLine, { color: colors.textPrimary }]}>{addr.line1}</Text>
-                    {addr.line2 ? <Text style={[styles.addressLine, { color: colors.textSecondary }]}>{addr.line2}</Text> : null}
-                    <Text style={[styles.addressLine, { color: colors.textSecondary }]}>
-                      {addr.city}{addr.state ? `, ${addr.state}` : ''} {addr.postal_code ?? ''}
-                    </Text>
-                    <Text style={[styles.addressLine, { color: colors.textSecondary }]}>{addr.country}</Text>
-                    {addr.phone ? <Text style={[styles.addressLine, { color: colors.textMuted }]}>Phone: {addr.phone}</Text> : null}
-                  </View>
-                ))}
-              </View>
+              <CardSection title="Saved Addresses">
+                <View style={styles.addressContainer}>
+                  {customer.addresses.map((addr: CustomerAddress) => (
+                    <View key={addr.id} style={styles.addressBlock}>
+                      {addr.is_default && (
+                        <View style={[styles.defaultBadge, { backgroundColor: colors.gold + '20' }]}>
+                          <Text style={[styles.defaultBadgeText, { color: colors.gold }]}>Default</Text>
+                        </View>
+                      )}
+                      <Text style={[styles.addressLine, { color: colors.textPrimary }]}>{addr.line1}</Text>
+                      {addr.line2 ? <Text style={[styles.addressLine, { color: colors.textSecondary }]}>{addr.line2}</Text> : null}
+                      <Text style={[styles.addressLine, { color: colors.textSecondary }]}>
+                        {addr.city}{addr.state ? `, ${addr.state}` : ''} {addr.postal_code ?? ''}
+                      </Text>
+                      <Text style={[styles.addressLine, { color: colors.textSecondary }]}>{addr.country}</Text>
+                      {addr.phone ? <Text style={[styles.addressLine, { color: colors.textMuted }]}>Phone: {addr.phone}</Text> : null}
+                    </View>
+                  ))}
+                </View>
+              </CardSection>
             </Card>
           )}
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Recent Orders</Text>
-            {customer.recent_orders.length === 0 ? (
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>No orders yet.</Text>
-            ) : (
-              <View style={styles.ordersList}>
-                {customer.recent_orders.map((order: CustomerOrderSummary) => (
-                  <View key={order.id} style={styles.orderItem}>
-                    <View style={styles.orderLeft}>
-                      <Text style={[styles.orderNumber, { color: colors.gold }]}>{order.order_number}</Text>
-                      <Text style={[styles.orderDate, { color: colors.textMuted }]}>
-                        {new Date(order.placed_at).toLocaleDateString()}
-                      </Text>
+            <CardSection title="Recent Orders">
+              {customer.recent_orders.length === 0 ? (
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>No orders yet.</Text>
+              ) : (
+                <View style={styles.ordersList}>
+                  {customer.recent_orders.map((order: CustomerOrderSummary) => (
+                    <View key={order.id} style={styles.orderItem}>
+                      <View style={styles.orderLeft}>
+                        <Text style={[styles.orderNumber, { color: colors.gold }]}>{order.order_number}</Text>
+                        <Text style={[styles.orderDate, { color: colors.textMuted }]}>
+                          {formatDate(order.placed_at)}
+                        </Text>
+                      </View>
+                      <View style={styles.orderRight}>
+                        <Text style={[styles.orderTotal, { color: colors.textPrimary }]}>
+                          {order.currency === 'USD' ? '$' : ''}{order.grand_total.toFixed(2)}
+                        </Text>
+                        <Text style={[styles.orderStatus, { color: colors.textSecondary }]}>{order.status}</Text>
+                      </View>
                     </View>
-                    <View style={styles.orderRight}>
-                      <Text style={[styles.orderTotal, { color: colors.textPrimary }]}>
-                        {order.currency === 'USD' ? '$' : ''}{order.grand_total.toFixed(2)}
-                      </Text>
-                      <Text style={[styles.orderStatus, { color: colors.textSecondary }]}>{order.status}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
+                  ))}
+                </View>
+              )}
+            </CardSection>
           </Card>
         </ScrollView>
       </ScreenWrapper>
@@ -189,22 +170,7 @@ export default function CustomerDetailScreen() {
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingBottom: 24 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  iconBox: { width: 56, height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  iconText: { fontSize: 24, fontWeight: '800', color: '#d4a649' },
-  headerInfo: { flex: 1, gap: 2 },
-  customerName: { fontSize: 20, fontWeight: '700', lineHeight: 26 },
-  customerEmail: { fontSize: 13 },
-  sectionTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
-  infoContainer: { gap: 10 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  infoLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoLabel: { fontSize: 14 },
-  infoValue: { fontSize: 14, fontWeight: '500', maxWidth: 180, textAlign: 'right' },
-  summaryGrid: { flexDirection: 'row', gap: 10 },
-  summaryItem: { flex: 1, borderRadius: 10, padding: 14, alignItems: 'center', gap: 4 },
-  summaryItemLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  summaryItemValue: { fontSize: 22, fontWeight: '700' },
+  addressContainer: { gap: 10 },
   addressBlock: { gap: 2, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.05)' },
   defaultBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginBottom: 4 },
   defaultBadgeText: { fontSize: 11, fontWeight: '600' },

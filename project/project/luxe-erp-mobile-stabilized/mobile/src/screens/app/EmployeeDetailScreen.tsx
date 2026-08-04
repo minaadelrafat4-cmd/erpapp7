@@ -12,37 +12,17 @@ import { Card } from '@components/Card';
 import { ErrorState } from '@components/ErrorState';
 import { LoadingState } from '@components/LoadingState';
 import { RoleGate } from '@components/RoleGate';
+import { InfoRow, InfoGroup } from '@components/InfoRow';
+import { DetailHeader } from '@components/DetailHeader';
+import { CardSection } from '@components/SectionHeader';
+import { SummaryGrid } from '@components/SummaryGrid';
 import { useThemeStore } from '@store/themeStore';
 import { useEmployeeDetail } from '@hooks/useERP';
 import { useResponsive } from '@hooks/useResponsive';
 import { useLocalSearchParams } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getIconName } from '@config/icons';
+import { formatCurrency, formatDate } from '@lib/format';
 import { navMinRank } from '@constants';
-import type { IconName, ThemeColors } from '@apptypes';
 import type { EmployeeRole } from '@apptypes/erp';
-
-function InfoRow({ label, value, icon, colors }: { label: string; value: string; icon: IconName; colors: ThemeColors }) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLeft}>
-        <MaterialCommunityIcons name={getIconName(icon)} size={18} color={colors.textMuted} />
-        <Text style={[styles.infoLabel, { color: colors.textMuted }]}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{value}</Text>
-    </View>
-  );
-}
-
-function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-}
 
 export default function EmployeeDetailScreen() {
   const { colors } = useThemeStore();
@@ -118,92 +98,76 @@ export default function EmployeeDetailScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
         >
           <Card>
-            <View style={styles.headerRow}>
-              <View style={[styles.avatar, { backgroundColor: colors.surfaceElevated }]}>
-                <Text style={[styles.avatarText, { color: colors.gold }]}>{initials}</Text>
-              </View>
-              <View style={styles.headerInfo}>
-                <Text style={[styles.empName, { color: colors.textPrimary }]}>{fullName}</Text>
-                {emp.position && (
-                  <Text style={[styles.empPosition, { color: colors.textSecondary }]}>{emp.position}</Text>
-                )}
+            <DetailHeader
+              icon="employees"
+              title={fullName}
+              subtitle={emp.position ?? undefined}
+              right={
                 <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
                   <Text style={[styles.statusText, { color: statusColor }]}>{getStatusLabel(emp.status)}</Text>
                 </View>
-              </View>
-            </View>
+              }
+            />
           </Card>
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Contact Information</Text>
-            <View style={styles.infoContainer}>
-              <InfoRow label="Email" value={emp.email} icon="mail" colors={colors} />
-              {emp.phone && <InfoRow label="Phone" value={emp.phone} icon="phone" colors={colors} />}
-              <InfoRow label="Hire Date" value={formatDate(emp.hire_date)} icon="calendar" colors={colors} />
-            </View>
+            <CardSection title="Contact Information">
+              <InfoGroup>
+                <InfoRow label="Email" value={emp.email} icon="mail" />
+                {emp.phone && <InfoRow label="Phone" value={emp.phone} icon="phone" />}
+                <InfoRow label="Hire Date" value={formatDate(emp.hire_date)} icon="calendar" />
+              </InfoGroup>
+            </CardSection>
           </Card>
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Branch Assignment</Text>
-            <View style={styles.infoContainer}>
-              <InfoRow
-                label="Branch"
-                value={emp.branch_name ?? 'Not assigned'}
-                icon="store"
-                colors={colors}
-              />
-              {emp.branch_code && (
-                <InfoRow label="Branch Code" value={emp.branch_code} icon="building" colors={colors} />
-              )}
-            </View>
+            <CardSection title="Branch Assignment">
+              <InfoGroup>
+                <InfoRow label="Branch" value={emp.branch_name ?? 'Not assigned'} icon="store" />
+                {emp.branch_code && <InfoRow label="Branch Code" value={emp.branch_code} icon="building" />}
+              </InfoGroup>
+            </CardSection>
           </Card>
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Roles & Permissions</Text>
-            {emp.roles.length > 0 ? (
-              <View style={styles.roleList}>
-                {emp.roles.map((role: EmployeeRole) => (
-                  <View key={role.id} style={[styles.roleItem, { backgroundColor: colors.surfaceElevated }]}>
-                    <MaterialCommunityIcons name={getIconName('shield')} size={16} color={colors.gold} />
-                    <View style={styles.roleInfo}>
-                      <Text style={[styles.roleName, { color: colors.textPrimary }]}>{role.name}</Text>
-                      {role.description && (
-                        <Text style={[styles.roleDesc, { color: colors.textMuted }]} numberOfLines={2}>{role.description}</Text>
-                      )}
+            <CardSection title="Roles & Permissions">
+              {emp.roles.length > 0 ? (
+                <View style={styles.roleList}>
+                  {emp.roles.map((role: EmployeeRole) => (
+                    <View key={role.id} style={[styles.roleItem, { backgroundColor: colors.surfaceElevated }]}>
+                      <View style={styles.roleInfo}>
+                        <Text style={[styles.roleName, { color: colors.textPrimary }]}>{role.name}</Text>
+                        {role.description && (
+                          <Text style={[styles.roleDesc, { color: colors.textMuted }]} numberOfLines={2}>{role.description}</Text>
+                        )}
+                      </View>
                     </View>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>No roles assigned.</Text>
-            )}
+                  ))}
+                </View>
+              ) : (
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>No roles assigned.</Text>
+              )}
+            </CardSection>
           </Card>
 
           {emp.performance && (
             <Card>
-              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Sales Performance</Text>
-              <View style={styles.summaryGrid}>
-                <View style={[styles.summaryItem, { backgroundColor: colors.surfaceElevated }]}>
-                  <Text style={[styles.summaryItemLabel, { color: colors.textMuted }]}>Total Sales</Text>
-                  <Text style={[styles.summaryItemValue, { color: colors.gold }]}>{formatCurrency(emp.performance.total_sales)}</Text>
-                </View>
-                <View style={[styles.summaryItem, { backgroundColor: colors.surfaceElevated }]}>
-                  <Text style={[styles.summaryItemLabel, { color: colors.textMuted }]}>Orders</Text>
-                  <Text style={[styles.summaryItemValue, { color: colors.textPrimary }]}>{emp.performance.order_count}</Text>
-                </View>
-                <View style={[styles.summaryItem, { backgroundColor: colors.surfaceElevated }]}>
-                  <Text style={[styles.summaryItemLabel, { color: colors.textMuted }]}>Avg Sale</Text>
-                  <Text style={[styles.summaryItemValue, { color: colors.textPrimary }]}>{formatCurrency(emp.performance.avg_sale_value)}</Text>
-                </View>
-              </View>
-              {emp.performance.last_sale_at && (
-                <View style={styles.lastSaleRow}>
-                  <MaterialCommunityIcons name={getIconName('clock')} size={14} color={colors.textMuted} />
-                  <Text style={[styles.lastSaleText, { color: colors.textMuted }]}>
-                    Last sale: {formatDate(emp.performance.last_sale_at)}
-                  </Text>
-                </View>
-              )}
+              <CardSection title="Sales Performance">
+                <SummaryGrid
+                  items={[
+                    { label: 'Total Sales', value: formatCurrency(emp.performance.total_sales), highlight: true, highlightColor: colors.gold },
+                    { label: 'Orders', value: emp.performance.order_count },
+                    { label: 'Avg Sale', value: formatCurrency(emp.performance.avg_sale_value) },
+                  ]}
+                />
+                {emp.performance.last_sale_at && (
+                  <View style={styles.lastSaleRow}>
+                    <Text style={[styles.lastSaleText, { color: colors.textMuted }]}>
+                      Last sale: {formatDate(emp.performance.last_sale_at)}
+                    </Text>
+                  </View>
+                )}
+              </CardSection>
             </Card>
           )}
         </ScrollView>
@@ -215,30 +179,14 @@ export default function EmployeeDetailScreen() {
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingBottom: 24 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 24, fontWeight: '700' },
-  headerInfo: { flex: 1, gap: 4 },
-  empName: { fontSize: 20, fontWeight: '700', lineHeight: 26 },
-  empPosition: { fontSize: 14 },
-  statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginTop: 2 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   statusText: { fontSize: 11, fontWeight: '600' },
-  sectionTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
-  infoContainer: { gap: 10 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  infoLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoLabel: { fontSize: 14 },
-  infoValue: { fontSize: 14, fontWeight: '500', maxWidth: 180, textAlign: 'right' },
   roleList: { gap: 10 },
   roleItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10 },
   roleInfo: { flex: 1, gap: 2 },
   roleName: { fontSize: 14, fontWeight: '600' },
   roleDesc: { fontSize: 12 },
   emptyText: { fontSize: 14 },
-  summaryGrid: { flexDirection: 'row', gap: 10 },
-  summaryItem: { flex: 1, borderRadius: 10, padding: 14, alignItems: 'center', gap: 4 },
-  summaryItemLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  summaryItemValue: { fontSize: 18, fontWeight: '700' },
-  lastSaleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
+  lastSaleRow: { marginTop: 12 },
   lastSaleText: { fontSize: 12 },
 });

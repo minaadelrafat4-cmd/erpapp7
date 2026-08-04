@@ -5,44 +5,27 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
   RefreshControl,
   ActivityIndicator,
-  ScrollView,
 } from 'react-native';
 import { ScreenWrapper } from '@components/ScreenWrapper';
 import { AppHeader } from '@components/AppHeader';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { RoleGate } from '@components/RoleGate';
+import { SearchBar } from '@components/SearchBar';
+import { FilterChips } from '@components/FilterChips';
+import { StatusBadge } from '@components/StatusBadge';
 import { useThemeStore } from '@store/themeStore';
 import { useStockTransfers } from '@hooks/useERP';
 import { useResponsive, getCardWidth } from '@hooks/useResponsive';
 import { useRouter } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getIconName } from '@config/icons';
+import { formatDate } from '@lib/format';
 import { navMinRank } from '@constants';
 import type { StockTransferListItem } from '@apptypes/erp';
-import type { ThemeColors } from '@apptypes';
 
 const DEBOUNCE_MS = 300;
 const STATUS_OPTIONS = ['all', 'draft', 'submitted', 'in_transit', 'received', 'cancelled'];
-
-function StatusBadge({ status, colors }: { status: string; colors: ThemeColors }) {
-  const colorMap: Record<string, string> = {
-    draft: colors.textMuted,
-    submitted: colors.accent,
-    in_transit: colors.gold,
-    received: colors.success,
-    cancelled: colors.error,
-  };
-  const color = colorMap[status] ?? colors.textSecondary;
-  return (
-    <View style={[styles.statusBadge, { backgroundColor: color + '20' }]}>
-      <Text style={[styles.statusText, { color }]}>{status.replace('_', ' ')}</Text>
-    </View>
-  );
-}
 
 export default function StockTransfersScreen() {
   const { colors } = useThemeStore();
@@ -82,7 +65,7 @@ export default function StockTransfersScreen() {
     }
   }, [transfersQuery]);
 
-  const renderItem = ({ item }: { item: StockTransferListItem }) => (
+  const renderItem = useCallback(({ item }: { item: StockTransferListItem }) => (
     <TouchableOpacity
       style={[styles.transferCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}
       activeOpacity={0.7}
@@ -90,37 +73,23 @@ export default function StockTransfersScreen() {
     >
       <View style={styles.cardTop}>
         <Text style={[styles.transferNumber, { color: colors.gold }]} numberOfLines={1}>{item.transfer_number}</Text>
-        <StatusBadge status={item.status} colors={colors} />
+        <StatusBadge status={item.status} />
       </View>
       <View style={styles.routeRow}>
-        <View style={styles.routePoint}>
-          <MaterialCommunityIcons
-            name={item.source_type === 'branch' ? getIconName('store') : getIconName('warehouse')}
-            size={14}
-            color={colors.textMuted}
-          />
-          <Text style={[styles.routeText, { color: colors.textSecondary }]} numberOfLines={1}>{item.source_name}</Text>
-        </View>
-        <MaterialCommunityIcons name="arrow-right" size={14} color={colors.textMuted} />
-        <View style={styles.routePoint}>
-          <MaterialCommunityIcons
-            name={item.destination_type === 'branch' ? getIconName('store') : getIconName('warehouse')}
-            size={14}
-            color={colors.textMuted}
-          />
-          <Text style={[styles.routeText, { color: colors.textSecondary }]} numberOfLines={1}>{item.destination_name}</Text>
-        </View>
+        <Text style={[styles.routeText, { color: colors.textSecondary }]} numberOfLines={1}>{item.source_name}</Text>
+        <Text style={[styles.routeArrow, { color: colors.textMuted }]}> → </Text>
+        <Text style={[styles.routeText, { color: colors.textSecondary }]} numberOfLines={1}>{item.destination_name}</Text>
       </View>
       <View style={styles.cardBottom}>
         <Text style={[styles.metaText, { color: colors.textMuted }]}>
           {item.total_items} {item.total_items === 1 ? 'item' : 'items'} · {item.total_quantity} units
         </Text>
         <Text style={[styles.dateText, { color: colors.textMuted }]}>
-          {new Date(item.created_at).toLocaleDateString()}
+          {formatDate(item.created_at)}
         </Text>
       </View>
     </TouchableOpacity>
-  );
+  ), [colors, cardWidth, router]);
 
   const showLoading = transfersQuery.isLoading && !refreshing;
   const showError = transfersQuery.isError && !refreshing;
@@ -130,43 +99,13 @@ export default function StockTransfersScreen() {
       <ScreenWrapper>
         <AppHeader title="Stock Transfers" subtitle="Inter-location transfers" showBack showMenu />
         <View style={[styles.content, { paddingHorizontal: layout.padding, maxWidth: layout.contentMaxWidth, alignSelf: layout.isTablet ? 'center' : 'stretch' }]}>
-          <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.textPrimary }]}
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Search by transfer number…"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')}>
-                <MaterialCommunityIcons name="close" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Search by transfer number…" />
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterContent}>
-            {STATUS_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt}
-                style={[
-                  styles.filterChip,
-                  {
-                    backgroundColor: statusFilter === opt ? colors.gold : colors.surface,
-                    borderColor: statusFilter === opt ? colors.gold : colors.border,
-                  },
-                ]}
-                onPress={() => setStatusFilter(opt)}
-              >
-                <Text style={[styles.filterText, { color: statusFilter === opt ? '#0c0f13' : colors.textSecondary }]}>
-                  {opt === 'all' ? 'All' : opt.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <FilterChips
+            options={STATUS_OPTIONS}
+            selected={statusFilter}
+            onSelect={setStatusFilter}
+          />
 
           {showLoading && (
             <View style={styles.centerState}>
@@ -193,6 +132,9 @@ export default function StockTransfersScreen() {
               numColumns={layout.columns}
               key={layout.columns}
               contentContainerStyle={styles.list}
+              removeClippedSubviews
+              maxToRenderPerBatch={10}
+              windowSize={10}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
               onEndReached={onLoadMore}
               onEndReachedThreshold={0.5}
@@ -222,30 +164,13 @@ export default function StockTransfersScreen() {
 
 const styles = StyleSheet.create({
   content: { flex: 1 },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
-    marginBottom: 10,
-  },
-  searchInput: { flex: 1, fontSize: 15, paddingVertical: 2 },
-  filterScroll: { marginBottom: 12, maxHeight: 40 },
-  filterContent: { gap: 8, paddingHorizontal: 2 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
-  filterText: { fontSize: 13, fontWeight: '600' },
   list: { gap: 12, paddingBottom: 24 },
   transferCard: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 8 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   transferNumber: { fontSize: 15, fontWeight: '700', fontFamily: 'monospace' },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  statusText: { fontSize: 11, fontWeight: '600', textTransform: 'capitalize' },
-  routeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  routePoint: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
+  routeRow: { flexDirection: 'row', alignItems: 'center' },
   routeText: { fontSize: 12, flex: 1 },
+  routeArrow: { fontSize: 12 },
   cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   metaText: { fontSize: 12 },
   dateText: { fontSize: 12 },

@@ -4,13 +4,12 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
-  TextInput,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import { ScreenWrapper } from '@components/ScreenWrapper';
 import { AppHeader } from '@components/AppHeader';
+import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { RoleGate } from '@components/RoleGate';
@@ -19,16 +18,12 @@ import { useReports } from '@hooks/useERP';
 import { useResponsive, getCardWidth } from '@hooks/useResponsive';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getIconName } from '@config/icons';
+import { formatDate } from '@lib/format';
 import { navMinRank } from '@constants';
 import type { ReportListItem } from '@apptypes/erp';
+import type { IconName } from '@apptypes';
 
 const DEBOUNCE_MS = 300;
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return 'Never';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-}
 
 function getReportTypeIcon(type: string): string {
   const lower = type.toLowerCase();
@@ -71,8 +66,8 @@ export default function ReportsScreen() {
     }
   }, [reportsQuery]);
 
-  const renderItem = ({ item }: { item: ReportListItem }) => {
-    const typeIcon = getReportTypeIcon(item.type) as Parameters<typeof getIconName>[0];
+  const renderItem = useCallback(({ item }: { item: ReportListItem }) => {
+    const typeIcon = getReportTypeIcon(item.type) as IconName;
 
     return (
       <View style={[styles.reportCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}>
@@ -104,7 +99,7 @@ export default function ReportsScreen() {
         </View>
       </View>
     );
-  };
+  }, [colors, cardWidth]);
 
   const showLoading = reportsQuery.isLoading && !refreshing;
   const showError = reportsQuery.isError && !refreshing;
@@ -114,23 +109,7 @@ export default function ReportsScreen() {
       <ScreenWrapper>
         <AppHeader title="Reports" subtitle="Business reports" showBack showMenu />
         <View style={[styles.content, { paddingHorizontal: layout.padding, maxWidth: layout.contentMaxWidth, alignSelf: layout.isTablet ? 'center' : 'stretch' }]}>
-          <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.textPrimary }]}
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Search reports…"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')}>
-                <MaterialCommunityIcons name="close" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Search reports…" />
 
           {showLoading && (
             <View style={styles.centerState}>
@@ -157,6 +136,9 @@ export default function ReportsScreen() {
               numColumns={layout.columns}
               key={layout.columns}
               contentContainerStyle={styles.list}
+              removeClippedSubviews
+              maxToRenderPerBatch={10}
+              windowSize={10}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
               onEndReached={() => {
                 if (reportsQuery.hasNextPage && !reportsQuery.isFetchingNextPage) {
@@ -190,17 +172,6 @@ export default function ReportsScreen() {
 
 const styles = StyleSheet.create({
   content: { flex: 1 },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
-    marginBottom: 12,
-  },
-  searchInput: { flex: 1, fontSize: 15, paddingVertical: 2 },
   list: { gap: 12, paddingBottom: 24 },
   reportCard: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 10 },
   reportCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },

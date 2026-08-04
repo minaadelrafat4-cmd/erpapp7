@@ -17,6 +17,7 @@ import { ROLE_QUICK_ACTIONS } from '@constants';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getIconName } from '@config/icons';
+import { formatRelativeTime } from '@lib/format';
 import type { IconName } from '@apptypes';
 import type { DashboardSummary, ERPNotification } from '@apptypes/erp';
 import { useQueryClient } from '@tanstack/react-query';
@@ -38,20 +39,6 @@ const KPI_CARDS: KpiCardConfig[] = [
   { label: 'Branches', value: 0, icon: 'building', colorKey: 'accent', permission: 'branches.view', minRank: 60 },
   { label: 'Warehouses', value: 0, icon: 'warehouse', colorKey: 'success', permission: 'warehouses.view', minRank: 60 },
 ];
-
-function formatRelativeTime(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diff = Math.max(0, now - then);
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString();
-}
 
 export default function DashboardScreen() {
   const { colors } = useThemeStore();

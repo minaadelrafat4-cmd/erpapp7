@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -17,42 +17,18 @@ import { Button } from '@components/Button';
 import { ErrorState } from '@components/ErrorState';
 import { LoadingState } from '@components/LoadingState';
 import { RoleGate } from '@components/RoleGate';
+import { InfoRow, InfoGroup } from '@components/InfoRow';
+import { StatusBadge } from '@components/StatusBadge';
+import { DetailHeader } from '@components/DetailHeader';
+import { CardSection } from '@components/SectionHeader';
+import { ProgressBar } from '@components/ProgressBar';
 import { useThemeStore } from '@store/themeStore';
 import { useReceivingDetail, useUpdateReceivedQuantity, useCompleteReceiving } from '@hooks/useERP';
 import { useResponsive } from '@hooks/useResponsive';
 import { useLocalSearchParams } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getIconName } from '@config/icons';
+import { formatDate } from '@lib/format';
 import { navMinRank } from '@constants';
-import type { IconName, ThemeColors } from '@apptypes';
 import type { ReceivingItem } from '@apptypes/erp';
-
-function InfoRow({ label, value, icon, colors }: { label: string; value: string; icon: IconName; colors: ThemeColors }) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLeft}>
-        <MaterialCommunityIcons name={getIconName(icon)} size={18} color={colors.textMuted} />
-        <Text style={[styles.infoLabel, { color: colors.textMuted }]}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{value}</Text>
-    </View>
-  );
-}
-
-function ReceivingStatusBadge({ status, colors }: { status: string; colors: ThemeColors }) {
-  const colorMap: Record<string, string> = {
-    pending: colors.textMuted,
-    partial: colors.warning,
-    received: colors.success,
-    cancelled: colors.error,
-  };
-  const color = colorMap[status] ?? colors.textSecondary;
-  return (
-    <View style={[styles.statusBadge, { backgroundColor: color + '20' }]}>
-      <Text style={[styles.statusText, { color }]}>{status}</Text>
-    </View>
-  );
-}
 
 export default function ReceivingDetailScreen() {
   const { colors } = useThemeStore();
@@ -64,13 +40,13 @@ export default function ReceivingDetailScreen() {
   const updateReceived = useUpdateReceivedQuantity();
   const completeReceiving = useCompleteReceiving();
 
-  const [refreshing, setRefreshing] = useState(false);
-  const [editingItem, setEditingItem] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [completing, setCompleting] = useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [editingItem, setEditingItem] = React.useState<string | null>(null);
+  const [editValue, setEditValue] = React.useState('');
+  const [saving, setSaving] = React.useState(false);
+  const [completing, setCompleting] = React.useState(false);
 
-  const onRefresh = useCallback(async () => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
       await receivingQuery.refetch();
@@ -174,115 +150,113 @@ export default function ReceivingDetailScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
         >
           <Card>
-            <View style={styles.headerRow}>
-              <View style={[styles.iconBox, { backgroundColor: colors.surfaceElevated }]}>
-                <MaterialCommunityIcons name={getIconName('receiving')} size={28} color={colors.gold} />
-              </View>
-              <View style={styles.headerInfo}>
-                <Text style={[styles.poNumber, { color: colors.textPrimary }]}>{receiving.po_number}</Text>
-                <Text style={[styles.supplierName, { color: colors.textMuted }]}>{receiving.supplier_name}</Text>
-              </View>
-              <ReceivingStatusBadge status={receiving.receiving_status} colors={colors} />
-            </View>
+            <DetailHeader
+              icon="receiving"
+              title={receiving.po_number}
+              subtitle={receiving.supplier_name}
+              right={<StatusBadge status={receiving.receiving_status} />}
+            />
           </Card>
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Purchase Order Reference</Text>
-            <View style={styles.infoContainer}>
-              <InfoRow label="PO Number" value={receiving.po_number} icon="clipboard" colors={colors} />
-              <InfoRow label="Supplier" value={receiving.supplier_name} icon="truck" colors={colors} />
-              <InfoRow label="PO Status" value={receiving.status} icon="tag" colors={colors} />
-              {receiving.expected_at ? <InfoRow label="Expected" value={new Date(receiving.expected_at).toLocaleDateString()} icon="calendar" colors={colors} /> : null}
-              {receiving.received_at ? <InfoRow label="Received Date" value={new Date(receiving.received_at).toLocaleDateString()} icon="package" colors={colors} /> : null}
-            </View>
+            <CardSection title="Purchase Order Reference">
+              <InfoGroup>
+                <InfoRow label="PO Number" value={receiving.po_number} icon="clipboard" />
+                <InfoRow label="Supplier" value={receiving.supplier_name} icon="truck" />
+                <InfoRow label="PO Status" value={receiving.status} icon="tag" />
+                {receiving.expected_at ? <InfoRow label="Expected" value={formatDate(receiving.expected_at)} icon="calendar" /> : null}
+                {receiving.received_at ? <InfoRow label="Received Date" value={formatDate(receiving.received_at)} icon="package" /> : null}
+              </InfoGroup>
+            </CardSection>
           </Card>
 
           {receiving.warehouse_name ? (
             <Card>
-              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Warehouse Information</Text>
-              <View style={styles.infoContainer}>
-                <InfoRow label="Warehouse" value={receiving.warehouse_name} icon="warehouse" colors={colors} />
-                {receiving.warehouse_address ? <InfoRow label="Address" value={receiving.warehouse_address} icon="map-pin" colors={colors} /> : null}
-                {receiving.warehouse_city ? <InfoRow label="City" value={receiving.warehouse_city} icon="map" colors={colors} /> : null}
-              </View>
+              <CardSection title="Warehouse Information">
+                <InfoGroup>
+                  <InfoRow label="Warehouse" value={receiving.warehouse_name} icon="warehouse" />
+                  {receiving.warehouse_address ? <InfoRow label="Address" value={receiving.warehouse_address} icon="map-pin" /> : null}
+                  {receiving.warehouse_city ? <InfoRow label="City" value={receiving.warehouse_city} icon="map" /> : null}
+                </InfoGroup>
+              </CardSection>
             </Card>
           ) : null}
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Receiving Progress</Text>
-            <View style={styles.progressSection}>
-              <View style={[styles.progressBar, { backgroundColor: colors.surfaceElevated }]}>
-                <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: progress >= 1 ? colors.success : colors.gold }]} />
+            <CardSection title="Receiving Progress">
+              <View style={styles.progressSection}>
+                <ProgressBar progress={progress} />
+                <View style={styles.progressStats}>
+                  <Text style={[styles.progressStat, { color: colors.textPrimary }]}>
+                    {receiving.received_quantity} / {receiving.total_quantity} units
+                  </Text>
+                  <Text style={[styles.progressStat, { color: colors.textMuted }]}>
+                    {receiving.received_items} / {receiving.total_items} items
+                  </Text>
+                </View>
               </View>
-              <View style={styles.progressStats}>
-                <Text style={[styles.progressStat, { color: colors.textPrimary }]}>
-                  {receiving.received_quantity} / {receiving.total_quantity} units
-                </Text>
-                <Text style={[styles.progressStat, { color: colors.textMuted }]}>
-                  {receiving.received_items} / {receiving.total_items} items
-                </Text>
-              </View>
-            </View>
+            </CardSection>
           </Card>
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Received Quantities</Text>
-            {receiving.items.length === 0 ? (
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>No items in this purchase order.</Text>
-            ) : (
-              <View style={styles.itemsList}>
-                {receiving.items.map((item: ReceivingItem) => (
-                  <View key={item.id} style={[styles.itemRow, { borderBottomColor: colors.border }]}>
-                    <View style={styles.itemLeft}>
-                      <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={2}>{item.product_name}</Text>
-                      {item.sku && <Text style={[styles.itemSku, { color: colors.textMuted }]} numberOfLines={1}>SKU: {item.sku}</Text>}
-                      <Text style={[styles.itemQty, { color: colors.textSecondary }]}>
-                        Ordered: {item.quantity} · Unit Cost: ${item.unit_cost.toFixed(2)}
-                      </Text>
-                      {editingItem === item.id ? (
-                        <View style={styles.editRow}>
-                          <TextInput
-                            style={[styles.editInput, { backgroundColor: colors.surfaceElevated, color: colors.textPrimary, borderColor: colors.gold }]}
-                            value={editValue}
-                            onChangeText={setEditValue}
-                            keyboardType="numeric"
-                            autoFocus
-                          />
-                          <TouchableOpacity
-                            style={[styles.editBtn, { backgroundColor: colors.gold }]}
-                            onPress={() => handleSaveEdit(item)}
-                            disabled={saving}
-                          >
-                            {saving ? <ActivityIndicator size="small" color="#0c0f13" /> : <MaterialCommunityIcons name="check" size={16} color="#0c0f13" />}
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.editBtn, { backgroundColor: colors.surfaceElevated }]}
-                            onPress={() => setEditingItem(null)}
-                            disabled={saving}
-                          >
-                            <MaterialCommunityIcons name="close" size={16} color={colors.textPrimary} />
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <View style={styles.receivedRow}>
-                          <Text style={[
-                            styles.receivedText,
-                            { color: item.received_quantity >= item.quantity ? colors.success : item.received_quantity > 0 ? colors.warning : colors.textMuted },
-                          ]}>
-                            Received: {item.received_quantity}/{item.quantity}
-                          </Text>
-                          {!isFullyReceived && (
-                            <TouchableOpacity onPress={() => handleStartEdit(item)} style={[styles.editLinkBtn, { borderColor: colors.gold }]}>
-                              <Text style={[styles.editLinkText, { color: colors.gold }]}>Update</Text>
+            <CardSection title="Received Quantities">
+              {receiving.items.length === 0 ? (
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>No items in this purchase order.</Text>
+              ) : (
+                <View style={styles.itemsList}>
+                  {receiving.items.map((item: ReceivingItem) => (
+                    <View key={item.id} style={[styles.itemRow, { borderBottomColor: colors.border }]}>
+                      <View style={styles.itemLeft}>
+                        <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={2}>{item.product_name}</Text>
+                        {item.sku && <Text style={[styles.itemSku, { color: colors.textMuted }]} numberOfLines={1}>SKU: {item.sku}</Text>}
+                        <Text style={[styles.itemQty, { color: colors.textSecondary }]}>
+                          Ordered: {item.quantity} · Unit Cost: ${item.unit_cost.toFixed(2)}
+                        </Text>
+                        {editingItem === item.id ? (
+                          <View style={styles.editRow}>
+                            <TextInput
+                              style={[styles.editInput, { backgroundColor: colors.surfaceElevated, color: colors.textPrimary, borderColor: colors.gold }]}
+                              value={editValue}
+                              onChangeText={setEditValue}
+                              keyboardType="numeric"
+                              autoFocus
+                            />
+                            <TouchableOpacity
+                              style={[styles.editBtn, { backgroundColor: colors.gold }]}
+                              onPress={() => handleSaveEdit(item)}
+                              disabled={saving}
+                            >
+                              {saving ? <ActivityIndicator size="small" color="#0c0f13" /> : <Text style={styles.checkIcon}>✓</Text>}
                             </TouchableOpacity>
-                          )}
-                        </View>
-                      )}
+                            <TouchableOpacity
+                              style={[styles.editBtn, { backgroundColor: colors.surfaceElevated }]}
+                              onPress={() => setEditingItem(null)}
+                              disabled={saving}
+                            >
+                              <Text style={[styles.closeIcon, { color: colors.textPrimary }]}>✕</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <View style={styles.receivedRow}>
+                            <Text style={[
+                              styles.receivedText,
+                              { color: item.received_quantity >= item.quantity ? colors.success : item.received_quantity > 0 ? colors.warning : colors.textMuted },
+                            ]}>
+                              Received: {item.received_quantity}/{item.quantity}
+                            </Text>
+                            {!isFullyReceived && (
+                              <TouchableOpacity onPress={() => handleStartEdit(item)} style={[styles.editLinkBtn, { borderColor: colors.gold }]}>
+                                <Text style={[styles.editLinkText, { color: colors.gold }]}>Update</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        )}
+                      </View>
                     </View>
-                  </View>
-                ))}
-              </View>
-            )}
+                  ))}
+                </View>
+              )}
+            </CardSection>
           </Card>
 
           {!isFullyReceived && receiving.items.length > 0 && (
@@ -304,22 +278,7 @@ export default function ReceivingDetailScreen() {
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingBottom: 24 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  iconBox: { width: 56, height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  headerInfo: { flex: 1, gap: 2 },
-  poNumber: { fontSize: 20, fontWeight: '700', fontFamily: 'monospace', lineHeight: 26 },
-  supplierName: { fontSize: 14 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  statusText: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
-  sectionTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
-  infoContainer: { gap: 10 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  infoLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoLabel: { fontSize: 14 },
-  infoValue: { fontSize: 14, fontWeight: '500', maxWidth: 180, textAlign: 'right' },
   progressSection: { gap: 8 },
-  progressBar: { height: 8, borderRadius: 4, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 4 },
   progressStats: { flexDirection: 'row', justifyContent: 'space-between' },
   progressStat: { fontSize: 13, fontWeight: '500' },
   emptyText: { fontSize: 14, fontStyle: 'italic' },
@@ -336,4 +295,6 @@ const styles = StyleSheet.create({
   editRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   editInput: { flex: 1, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, fontSize: 14 },
   editBtn: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  checkIcon: { fontSize: 16, color: '#0c0f13', fontWeight: '700' },
+  closeIcon: { fontSize: 14 },
 });

@@ -5,12 +5,12 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import { ScreenWrapper } from '@components/ScreenWrapper';
 import { AppHeader } from '@components/AppHeader';
+import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { RoleGate } from '@components/RoleGate';
@@ -61,29 +61,32 @@ export default function WarehousesScreen() {
     }
   }, [warehousesQuery]);
 
-  const renderItem = ({ item }: { item: Warehouse }) => (
-    <TouchableOpacity
-      style={[styles.whCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}
-      activeOpacity={0.7}
-      onPress={() => router.push({ pathname: '/(app)/warehouses/[id]', params: { id: item.id } } as never)}
-    >
-      <View style={[styles.whIconBox, { backgroundColor: colors.surfaceElevated }]}>
-        <MaterialCommunityIcons name={getIconName('warehouse')} size={32} color={colors.gold} />
-      </View>
-      <View style={styles.whInfo}>
-        <Text style={[styles.whName, { color: colors.textPrimary }]} numberOfLines={2}>{item.name}</Text>
-        <Text style={[styles.whCode, { color: colors.textMuted }]}>Code: {item.code}</Text>
-        <Text style={[styles.whLocation, { color: colors.textSecondary }]} numberOfLines={1}>
-          {item.city}{item.state ? `, ${item.state}` : ''}
-        </Text>
-        {item.capacity != null && (
-          <View style={[styles.capacityBadge, { backgroundColor: colors.gold + '20' }]}>
-            <Text style={[styles.capacityText, { color: colors.gold }]}>Capacity: {item.capacity}</Text>
-          </View>
-        )}
-      </View>
-      <MaterialCommunityIcons name={getIconName('chevron-right')} size={20} color={colors.textMuted} />
-    </TouchableOpacity>
+  const renderItem = useCallback(
+    ({ item }: { item: Warehouse }) => (
+      <TouchableOpacity
+        style={[styles.whCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}
+        activeOpacity={0.7}
+        onPress={() => router.push({ pathname: '/(app)/warehouses/[id]', params: { id: item.id } } as never)}
+      >
+        <View style={[styles.whIconBox, { backgroundColor: colors.surfaceElevated }]}>
+          <MaterialCommunityIcons name={getIconName('warehouse')} size={32} color={colors.gold} />
+        </View>
+        <View style={styles.whInfo}>
+          <Text style={[styles.whName, { color: colors.textPrimary }]} numberOfLines={2}>{item.name}</Text>
+          <Text style={[styles.whCode, { color: colors.textMuted }]}>Code: {item.code}</Text>
+          <Text style={[styles.whLocation, { color: colors.textSecondary }]} numberOfLines={1}>
+            {item.city}{item.state ? `, ${item.state}` : ''}
+          </Text>
+          {item.capacity != null && (
+            <View style={[styles.capacityBadge, { backgroundColor: colors.gold + '20' }]}>
+              <Text style={[styles.capacityText, { color: colors.gold }]}>Capacity: {item.capacity}</Text>
+            </View>
+          )}
+        </View>
+        <MaterialCommunityIcons name={getIconName('chevron-right')} size={20} color={colors.textMuted} />
+      </TouchableOpacity>
+    ),
+    [cardWidth, colors, router],
   );
 
   const showLoading = warehousesQuery.isLoading && !refreshing;
@@ -94,23 +97,7 @@ export default function WarehousesScreen() {
       <ScreenWrapper>
         <AppHeader title="Warehouses" subtitle="Warehouse locations" showBack showMenu />
         <View style={[styles.content, { paddingHorizontal: layout.padding, maxWidth: layout.contentMaxWidth, alignSelf: layout.isTablet ? 'center' : 'stretch' }]}>
-          <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.textPrimary }]}
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Search warehouses…"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')}>
-                <MaterialCommunityIcons name="close" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Search warehouses…" />
 
           {showLoading && (
             <View style={styles.centerState}>
@@ -136,6 +123,9 @@ export default function WarehousesScreen() {
               renderItem={renderItem}
               numColumns={layout.columns}
               key={layout.columns}
+              removeClippedSubviews
+              maxToRenderPerBatch={10}
+              windowSize={10}
               contentContainerStyle={styles.list}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
               ListEmptyComponent={
@@ -157,17 +147,6 @@ export default function WarehousesScreen() {
 
 const styles = StyleSheet.create({
   content: { flex: 1 },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
-    marginBottom: 12,
-  },
-  searchInput: { flex: 1, fontSize: 15, paddingVertical: 2 },
   list: { gap: 12, paddingBottom: 24 },
   whCard: {
     borderRadius: 12,

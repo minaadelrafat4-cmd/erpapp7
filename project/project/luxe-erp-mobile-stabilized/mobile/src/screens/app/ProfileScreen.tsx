@@ -28,7 +28,8 @@ import {
 } from '@hooks/useERP';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getIconName } from '@config/icons';
-import type { IconName, ThemeColors } from '@apptypes';
+import { InfoRow } from '@components/InfoRow';
+import { formatDateTime } from '@lib/format';
 
 export default function ProfileScreen() {
   const { colors } = useThemeStore();
@@ -214,24 +215,22 @@ export default function ProfileScreen() {
             </View>
           ) : (
             <View style={styles.infoContainer}>
-              <InfoRow label="Name" value={data.full_name ?? '—'} icon="user" colors={colors} />
-              <InfoRow label="Email" value={data.email} icon="mail" colors={colors} />
-              <InfoRow label="Role" value={roleLabel(data.role)} icon="shield" colors={colors} />
-              <InfoRow label="Branch" value={data.branch_name ?? 'Not assigned'} icon="store" colors={colors} />
-              {data.position && <InfoRow label="Position" value={data.position} icon="clipboard" colors={colors} />}
-              <InfoRow label="Phone" value={data.phone ?? '—'} icon="phone" colors={colors} />
+              <InfoRow label="Name" value={data.full_name ?? '—'} icon="user" />
+              <InfoRow label="Email" value={data.email} icon="mail" />
+              <InfoRow label="Role" value={roleLabel(data.role)} icon="shield" />
+              <InfoRow label="Branch" value={data.branch_name ?? 'Not assigned'} icon="store" />
+              {data.position && <InfoRow label="Position" value={data.position} icon="clipboard" />}
+              <InfoRow label="Phone" value={data.phone ?? '—'} icon="phone" />
               <InfoRow
                 label="Status"
                 value={data.status}
                 icon="check"
-                colors={colors}
                 valueColor={data.status === 'active' ? colors.success : colors.error}
               />
               <InfoRow
                 label="Last Login"
-                value={data.last_login_at ? new Date(data.last_login_at).toLocaleString() : '—'}
+                value={formatDateTime(data.last_login_at)}
                 icon="clock"
-                colors={colors}
               />
             </View>
           )}
@@ -248,30 +247,6 @@ export default function ProfileScreen() {
         />
       </ScrollView>
     </ScreenWrapper>
-  );
-}
-
-function InfoRow({
-  label,
-  value,
-  icon,
-  colors,
-  valueColor,
-}: {
-  label: string;
-  value: string;
-  icon: IconName;
-  colors: ThemeColors;
-  valueColor?: string;
-}) {
-  return (
-    <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
-      <View style={styles.infoLeft}>
-        <MaterialCommunityIcons name={getIconName(icon)} size={18} color={colors.textMuted} />
-        <Text style={[styles.infoLabel, { color: colors.textMuted }]}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, { color: valueColor ?? colors.textPrimary }]}>{value}</Text>
-    </View>
   );
 }
 
@@ -302,10 +277,6 @@ const styles = StyleSheet.create({
   editButton: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   editText: { fontSize: 14, fontWeight: '600' },
   infoContainer: { gap: 0 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 13, borderBottomWidth: StyleSheet.hairlineWidth },
-  infoLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  infoLabel: { fontSize: 14 },
-  infoValue: { fontSize: 14, fontWeight: '500', maxWidth: 180, textAlign: 'right' },
   editForm: { gap: 8 },
   editActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
   editBtn: { flex: 1 },

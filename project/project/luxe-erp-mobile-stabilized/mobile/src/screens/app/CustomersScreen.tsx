@@ -5,12 +5,12 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import { ScreenWrapper } from '@components/ScreenWrapper';
 import { AppHeader } from '@components/AppHeader';
+import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { RoleGate } from '@components/RoleGate';
@@ -62,37 +62,40 @@ export default function CustomersScreen() {
     }
   }, [customersQuery]);
 
-  const renderItem = ({ item }: { item: CustomerListItem }) => {
-    const fullName = [item.first_name, item.last_name].filter(Boolean).join(' ').trim() || 'Unknown';
-    const initials = (item.first_name ?? item.email ?? 'U').charAt(0).toUpperCase();
+  const renderItem = useCallback(
+    ({ item }: { item: CustomerListItem }) => {
+      const fullName = [item.first_name, item.last_name].filter(Boolean).join(' ').trim() || 'Unknown';
+      const initials = (item.first_name ?? item.email ?? 'U').charAt(0).toUpperCase();
 
-    return (
-      <TouchableOpacity
-        style={[styles.customerCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}
-        activeOpacity={0.7}
-        onPress={() => router.push({ pathname: '/(app)/customers/[id]', params: { id: item.id } } as never)}
-      >
-        <View style={[styles.customerAvatar, { backgroundColor: colors.gold }]}>
-          <Text style={styles.customerAvatarText}>{initials}</Text>
-        </View>
-        <View style={styles.customerInfo}>
-          <Text style={[styles.customerName, { color: colors.textPrimary }]} numberOfLines={1}>{fullName}</Text>
-          {item.email ? (
-            <Text style={[styles.customerEmail, { color: colors.textMuted }]} numberOfLines={1}>{item.email}</Text>
-          ) : null}
-          <View style={styles.customerStats}>
-            <View style={[styles.statBadge, { backgroundColor: colors.gold + '20' }]}>
-              <Text style={[styles.statText, { color: colors.gold }]}>{item.loyalty_points} pts</Text>
-            </View>
-            <View style={[styles.statBadge, { backgroundColor: colors.accent + '20' }]}>
-              <Text style={[styles.statText, { color: colors.accent }]}>{item.order_count} orders</Text>
+      return (
+        <TouchableOpacity
+          style={[styles.customerCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}
+          activeOpacity={0.7}
+          onPress={() => router.push({ pathname: '/(app)/customers/[id]', params: { id: item.id } } as never)}
+        >
+          <View style={[styles.customerAvatar, { backgroundColor: colors.gold }]}>
+            <Text style={styles.customerAvatarText}>{initials}</Text>
+          </View>
+          <View style={styles.customerInfo}>
+            <Text style={[styles.customerName, { color: colors.textPrimary }]} numberOfLines={1}>{fullName}</Text>
+            {item.email ? (
+              <Text style={[styles.customerEmail, { color: colors.textMuted }]} numberOfLines={1}>{item.email}</Text>
+            ) : null}
+            <View style={styles.customerStats}>
+              <View style={[styles.statBadge, { backgroundColor: colors.gold + '20' }]}>
+                <Text style={[styles.statText, { color: colors.gold }]}>{item.loyalty_points} pts</Text>
+              </View>
+              <View style={[styles.statBadge, { backgroundColor: colors.accent + '20' }]}>
+                <Text style={[styles.statText, { color: colors.accent }]}>{item.order_count} orders</Text>
+              </View>
             </View>
           </View>
-        </View>
-        <MaterialCommunityIcons name={getIconName('chevron-right')} size={20} color={colors.textMuted} />
-      </TouchableOpacity>
-    );
-  };
+          <MaterialCommunityIcons name={getIconName('chevron-right')} size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+      );
+    },
+    [cardWidth, colors, router],
+  );
 
   const showLoading = customersQuery.isLoading && !refreshing;
   const showError = customersQuery.isError && !refreshing;
@@ -102,23 +105,7 @@ export default function CustomersScreen() {
       <ScreenWrapper>
         <AppHeader title="Customers" subtitle="Customer accounts" showBack showMenu />
         <View style={[styles.content, { paddingHorizontal: layout.padding, maxWidth: layout.contentMaxWidth, alignSelf: layout.isTablet ? 'center' : 'stretch' }]}>
-          <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.textPrimary }]}
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Search by name or email…"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')}>
-                <MaterialCommunityIcons name="close" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Search by name or email…" />
 
           {showLoading && (
             <View style={styles.centerState}>
@@ -144,6 +131,9 @@ export default function CustomersScreen() {
               renderItem={renderItem}
               numColumns={layout.columns}
               key={layout.columns}
+              removeClippedSubviews
+              maxToRenderPerBatch={10}
+              windowSize={10}
               contentContainerStyle={styles.list}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
               onEndReached={onLoadMore}
@@ -174,17 +164,6 @@ export default function CustomersScreen() {
 
 const styles = StyleSheet.create({
   content: { flex: 1 },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
-    marginBottom: 12,
-  },
-  searchInput: { flex: 1, fontSize: 15, paddingVertical: 2 },
   list: { gap: 12, paddingBottom: 24 },
   customerCard: {
     borderRadius: 12,

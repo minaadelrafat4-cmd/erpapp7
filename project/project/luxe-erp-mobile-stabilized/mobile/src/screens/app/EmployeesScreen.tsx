@@ -5,12 +5,12 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import { ScreenWrapper } from '@components/ScreenWrapper';
 import { AppHeader } from '@components/AppHeader';
+import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { RoleGate } from '@components/RoleGate';
@@ -70,57 +70,60 @@ export default function EmployeesScreen() {
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
-  const renderItem = ({ item }: { item: EmployeeListItem }) => {
-    const fullName = `${item.first_name} ${item.last_name}`;
-    const statusColor = getStatusColor(item.status);
-    const initials = `${item.first_name.charAt(0)}${item.last_name.charAt(0)}`.toUpperCase();
+  const renderItem = useCallback(
+    ({ item }: { item: EmployeeListItem }) => {
+      const fullName = `${item.first_name} ${item.last_name}`;
+      const statusColor = getStatusColor(item.status);
+      const initials = `${item.first_name.charAt(0)}${item.last_name.charAt(0)}`.toUpperCase();
 
-    return (
-      <TouchableOpacity
-        style={[styles.empCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}
-        activeOpacity={0.7}
-        onPress={() => router.push({ pathname: '/(app)/employees/[id]', params: { id: item.id } } as never)}
-      >
-        <View style={styles.empCardHeader}>
-          <View style={[styles.avatar, { backgroundColor: colors.surfaceElevated }]}>
-            <Text style={[styles.avatarText, { color: colors.gold }]}>{initials}</Text>
+      return (
+        <TouchableOpacity
+          style={[styles.empCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}
+          activeOpacity={0.7}
+          onPress={() => router.push({ pathname: '/(app)/employees/[id]', params: { id: item.id } } as never)}
+        >
+          <View style={styles.empCardHeader}>
+            <View style={[styles.avatar, { backgroundColor: colors.surfaceElevated }]}>
+              <Text style={[styles.avatarText, { color: colors.gold }]}>{initials}</Text>
+            </View>
+            <View style={styles.empInfo}>
+              <Text style={[styles.empName, { color: colors.textPrimary }]} numberOfLines={1}>{fullName}</Text>
+              {item.position && (
+                <Text style={[styles.empPosition, { color: colors.textSecondary }]} numberOfLines={1}>{item.position}</Text>
+              )}
+              <Text style={[styles.empEmail, { color: colors.textMuted }]} numberOfLines={1}>{item.email}</Text>
+            </View>
           </View>
-          <View style={styles.empInfo}>
-            <Text style={[styles.empName, { color: colors.textPrimary }]} numberOfLines={1}>{fullName}</Text>
-            {item.position && (
-              <Text style={[styles.empPosition, { color: colors.textSecondary }]} numberOfLines={1}>{item.position}</Text>
+
+          <View style={styles.empMetaRow}>
+            <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+              <Text style={[styles.statusText, { color: statusColor }]}>{getStatusLabel(item.status)}</Text>
+            </View>
+            {item.branch_name && (
+              <View style={[styles.branchChip, { backgroundColor: colors.surfaceElevated }]}>
+                <MaterialCommunityIcons name={getIconName('store')} size={12} color={colors.textMuted} />
+                <Text style={[styles.branchText, { color: colors.textSecondary }]} numberOfLines={1}>{item.branch_name}</Text>
+              </View>
             )}
-            <Text style={[styles.empEmail, { color: colors.textMuted }]} numberOfLines={1}>{item.email}</Text>
           </View>
-        </View>
 
-        <View style={styles.empMetaRow}>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-            <Text style={[styles.statusText, { color: statusColor }]}>{getStatusLabel(item.status)}</Text>
-          </View>
-          {item.branch_name && (
-            <View style={[styles.branchChip, { backgroundColor: colors.surfaceElevated }]}>
-              <MaterialCommunityIcons name={getIconName('store')} size={12} color={colors.textMuted} />
-              <Text style={[styles.branchText, { color: colors.textSecondary }]} numberOfLines={1}>{item.branch_name}</Text>
+          {item.role_names.length > 0 && (
+            <View style={styles.roleRow}>
+              {item.role_names.slice(0, 2).map((role, idx) => (
+                <View key={idx} style={[styles.roleChip, { backgroundColor: colors.gold + '15', borderColor: colors.gold + '30' }]}>
+                  <Text style={[styles.roleText, { color: colors.gold }]} numberOfLines={1}>{role}</Text>
+                </View>
+              ))}
+              {item.role_names.length > 2 && (
+                <Text style={[styles.roleMore, { color: colors.textMuted }]}>+{item.role_names.length - 2}</Text>
+              )}
             </View>
           )}
-        </View>
-
-        {item.role_names.length > 0 && (
-          <View style={styles.roleRow}>
-            {item.role_names.slice(0, 2).map((role, idx) => (
-              <View key={idx} style={[styles.roleChip, { backgroundColor: colors.gold + '15', borderColor: colors.gold + '30' }]}>
-                <Text style={[styles.roleText, { color: colors.gold }]} numberOfLines={1}>{role}</Text>
-              </View>
-            ))}
-            {item.role_names.length > 2 && (
-              <Text style={[styles.roleMore, { color: colors.textMuted }]}>+{item.role_names.length - 2}</Text>
-            )}
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  };
+        </TouchableOpacity>
+      );
+    },
+    [cardWidth, colors, router],
+  );
 
   const showLoading = employeesQuery.isLoading && !refreshing;
   const showError = employeesQuery.isError && !refreshing;
@@ -130,23 +133,7 @@ export default function EmployeesScreen() {
       <ScreenWrapper>
         <AppHeader title="Employees" subtitle="Staff management" showBack showMenu />
         <View style={[styles.content, { paddingHorizontal: layout.padding, maxWidth: layout.contentMaxWidth, alignSelf: layout.isTablet ? 'center' : 'stretch' }]}>
-          <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.textPrimary }]}
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Search by name, email, position…"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')}>
-                <MaterialCommunityIcons name="close" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Search by name, email, position…" />
 
           {showLoading && (
             <View style={styles.centerState}>
@@ -172,6 +159,9 @@ export default function EmployeesScreen() {
               renderItem={renderItem}
               numColumns={layout.columns}
               key={layout.columns}
+              removeClippedSubviews
+              maxToRenderPerBatch={10}
+              windowSize={10}
               contentContainerStyle={styles.list}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
               onEndReached={() => {
@@ -206,17 +196,6 @@ export default function EmployeesScreen() {
 
 const styles = StyleSheet.create({
   content: { flex: 1 },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
-    marginBottom: 12,
-  },
-  searchInput: { flex: 1, fontSize: 15, paddingVertical: 2 },
   list: { gap: 12, paddingBottom: 24 },
   empCard: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 10 },
   empCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },

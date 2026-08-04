@@ -5,12 +5,12 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import { ScreenWrapper } from '@components/ScreenWrapper';
 import { AppHeader } from '@components/AppHeader';
+import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { RoleGate } from '@components/RoleGate';
@@ -116,50 +116,53 @@ export default function InventoryScreen() {
     />
   );
 
-  const renderItem = ({ item }: { item: InventoryItemWithStatus }) => {
-    const stockColor = getStockColor(item.stock_status);
-    const statusLabel = item.stock_status === 'out' ? 'Out of Stock' : item.stock_status === 'low' ? 'Low Stock' : 'In Stock';
+  const renderItem = useCallback(
+    ({ item }: { item: InventoryItemWithStatus }) => {
+      const stockColor = getStockColor(item.stock_status);
+      const statusLabel = item.stock_status === 'out' ? 'Out of Stock' : item.stock_status === 'low' ? 'Low Stock' : 'In Stock';
 
-    return (
-      <View style={[styles.invCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}>
-        <View style={styles.invCardHeader}>
-          <Text style={[styles.invProductName, { color: colors.textPrimary }]} numberOfLines={2}>{item.product_name}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: stockColor + '20' }]}>
-            <Text style={[styles.statusText, { color: stockColor }]}>{statusLabel}</Text>
+      return (
+        <View style={[styles.invCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}>
+          <View style={styles.invCardHeader}>
+            <Text style={[styles.invProductName, { color: colors.textPrimary }]} numberOfLines={2}>{item.product_name}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: stockColor + '20' }]}>
+              <Text style={[styles.statusText, { color: stockColor }]}>{statusLabel}</Text>
+            </View>
+          </View>
+
+          {item.sku && (
+            <Text style={[styles.invSku, { color: colors.textMuted }]} numberOfLines={1}>SKU: {item.sku}</Text>
+          )}
+          {item.category_name && (
+            <Text style={[styles.invCategory, { color: colors.textSecondary }]} numberOfLines={1}>{item.category_name}</Text>
+          )}
+
+          <View style={[styles.stockGrid, { borderColor: colors.border }]}>
+            <StockCell label="On Hand" value={item.quantity_on_hand} colors={colors} />
+            <StockCell label="Reserved" value={item.quantity_reserved} colors={colors} />
+            <StockCell label="Available" value={item.available_stock} colors={colors} highlight={stockColor} />
+            <StockCell label="Min" value={item.min_stock} colors={colors} />
+          </View>
+
+          <View style={styles.invLocationRow}>
+            {item.branch_name && (
+              <View style={[styles.locationChip, { backgroundColor: colors.surfaceElevated }]}>
+                <MaterialCommunityIcons name={getIconName('store')} size={12} color={colors.textMuted} />
+                <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>{item.branch_name}</Text>
+              </View>
+            )}
+            {item.warehouse_name && (
+              <View style={[styles.locationChip, { backgroundColor: colors.surfaceElevated }]}>
+                <MaterialCommunityIcons name={getIconName('warehouse')} size={12} color={colors.textMuted} />
+                <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>{item.warehouse_name}</Text>
+              </View>
+            )}
           </View>
         </View>
-
-        {item.sku && (
-          <Text style={[styles.invSku, { color: colors.textMuted }]} numberOfLines={1}>SKU: {item.sku}</Text>
-        )}
-        {item.category_name && (
-          <Text style={[styles.invCategory, { color: colors.textSecondary }]} numberOfLines={1}>{item.category_name}</Text>
-        )}
-
-        <View style={[styles.stockGrid, { borderColor: colors.border }]}>
-          <StockCell label="On Hand" value={item.quantity_on_hand} colors={colors} />
-          <StockCell label="Reserved" value={item.quantity_reserved} colors={colors} />
-          <StockCell label="Available" value={item.available_stock} colors={colors} highlight={stockColor} />
-          <StockCell label="Min" value={item.min_stock} colors={colors} />
-        </View>
-
-        <View style={styles.invLocationRow}>
-          {item.branch_name && (
-            <View style={[styles.locationChip, { backgroundColor: colors.surfaceElevated }]}>
-              <MaterialCommunityIcons name={getIconName('store')} size={12} color={colors.textMuted} />
-              <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>{item.branch_name}</Text>
-            </View>
-          )}
-          {item.warehouse_name && (
-            <View style={[styles.locationChip, { backgroundColor: colors.surfaceElevated }]}>
-              <MaterialCommunityIcons name={getIconName('warehouse')} size={12} color={colors.textMuted} />
-              <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>{item.warehouse_name}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    );
-  };
+      );
+    },
+    [cardWidth, colors],
+  );
 
   const showLoading = inventoryQuery.isLoading && !refreshing;
   const showError = inventoryQuery.isError && !refreshing;
@@ -170,23 +173,7 @@ export default function InventoryScreen() {
         <AppHeader title="Inventory" subtitle="Stock levels" showBack showMenu />
         <View style={[styles.content, { paddingHorizontal: layout.padding, maxWidth: layout.contentMaxWidth, alignSelf: layout.isTablet ? 'center' : 'stretch' }]}>
           {/* Search */}
-          <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.textPrimary }]}
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Search by product or SKU…"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')}>
-                <MaterialCommunityIcons name="close" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Search by product or SKU…" />
 
           {/* Branch Filter */}
           {branchesQuery.data && branchesQuery.data.length > 0 && (
@@ -227,6 +214,9 @@ export default function InventoryScreen() {
               renderItem={renderItem}
               numColumns={layout.columns}
               key={layout.columns}
+              removeClippedSubviews
+              maxToRenderPerBatch={10}
+              windowSize={10}
               contentContainerStyle={styles.list}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
               ListEmptyComponent={
@@ -257,17 +247,6 @@ function StockCell({ label, value, colors, highlight }: { label: string; value: 
 
 const styles = StyleSheet.create({
   content: { flex: 1 },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
-    marginBottom: 10,
-  },
-  searchInput: { flex: 1, fontSize: 15, paddingVertical: 2 },
   chipList: { gap: 8, paddingBottom: 4, marginBottom: 6 },
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   chipText: { fontSize: 13, fontWeight: '500' },

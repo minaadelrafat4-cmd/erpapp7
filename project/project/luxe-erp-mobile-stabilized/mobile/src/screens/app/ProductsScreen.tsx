@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
   RefreshControl,
   ActivityIndicator,
   Image,
@@ -13,6 +12,7 @@ import {
 import { ScreenWrapper } from '@components/ScreenWrapper';
 import { AppHeader } from '@components/AppHeader';
 import { Card } from '@components/Card';
+import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { useThemeStore } from '@store/themeStore';
@@ -71,45 +71,48 @@ export default function ProductsScreen() {
     return colors.success;
   };
 
-  const renderItem = ({ item }: { item: ProductListItem }) => {
-    const stockColor = getStockColor(item.stock, item.low_stock_threshold);
-    const stockLabel = item.stock <= 0 ? 'Out of stock' : item.stock <= item.low_stock_threshold ? `Low: ${item.stock}` : `${item.stock} in stock`;
+  const renderItem = useCallback(
+    ({ item }: { item: ProductListItem }) => {
+      const stockColor = getStockColor(item.stock, item.low_stock_threshold);
+      const stockLabel = item.stock <= 0 ? 'Out of stock' : item.stock <= item.low_stock_threshold ? `Low: ${item.stock}` : `${item.stock} in stock`;
 
-    return (
-      <TouchableOpacity
-        style={[styles.productCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}
-        activeOpacity={0.7}
-        onPress={() => router.push({ pathname: '/(app)/products/[id]', params: { id: item.id } } as never)}
-      >
-        <View style={[styles.productImageBox, { backgroundColor: colors.surfaceElevated }]}>
-          {item.image_url ? (
-            <Image source={{ uri: item.image_url }} style={styles.productImage} resizeMode="cover" />
-          ) : item.barcode ? (
-            <MaterialCommunityIcons name="barcode-scan" size={36} color={colors.textMuted} />
-          ) : (
-            <MaterialCommunityIcons name="package-variant-closed" size={36} color={colors.textMuted} />
-          )}
-        </View>
-        <View style={styles.productInfo}>
-          <Text style={[styles.productName, { color: colors.textPrimary }]} numberOfLines={2}>{item.name}</Text>
-          {item.category_name && (
-            <Text style={[styles.productCategory, { color: colors.textMuted }]} numberOfLines={1}>{item.category_name}</Text>
-          )}
-          {item.sku && (
-            <Text style={[styles.productSku, { color: colors.textSecondary }]} numberOfLines={1}>SKU: {item.sku}</Text>
-          )}
-          <View style={styles.productBottom}>
-            <Text style={[styles.productPrice, { color: colors.gold }]}>
-              ${item.price.toFixed(2)}
-            </Text>
-            <View style={[styles.stockBadge, { backgroundColor: stockColor + '20' }]}>
-              <Text style={[styles.stockText, { color: stockColor }]}>{stockLabel}</Text>
+      return (
+        <TouchableOpacity
+          style={[styles.productCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}
+          activeOpacity={0.7}
+          onPress={() => router.push({ pathname: '/(app)/products/[id]', params: { id: item.id } } as never)}
+        >
+          <View style={[styles.productImageBox, { backgroundColor: colors.surfaceElevated }]}>
+            {item.image_url ? (
+              <Image source={{ uri: item.image_url }} style={styles.productImage} resizeMode="cover" />
+            ) : item.barcode ? (
+              <MaterialCommunityIcons name="barcode-scan" size={36} color={colors.textMuted} />
+            ) : (
+              <MaterialCommunityIcons name="package-variant-closed" size={36} color={colors.textMuted} />
+            )}
+          </View>
+          <View style={styles.productInfo}>
+            <Text style={[styles.productName, { color: colors.textPrimary }]} numberOfLines={2}>{item.name}</Text>
+            {item.category_name && (
+              <Text style={[styles.productCategory, { color: colors.textMuted }]} numberOfLines={1}>{item.category_name}</Text>
+            )}
+            {item.sku && (
+              <Text style={[styles.productSku, { color: colors.textSecondary }]} numberOfLines={1}>SKU: {item.sku}</Text>
+            )}
+            <View style={styles.productBottom}>
+              <Text style={[styles.productPrice, { color: colors.gold }]}>
+                ${item.price.toFixed(2)}
+              </Text>
+              <View style={[styles.stockBadge, { backgroundColor: stockColor + '20' }]}>
+                <Text style={[styles.stockText, { color: stockColor }]}>{stockLabel}</Text>
+              </View>
             </View>
           </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+        </TouchableOpacity>
+      );
+    },
+    [cardWidth, colors, router],
+  );
 
   const showLoading = productsQuery.isLoading && !refreshing;
   const showError = productsQuery.isError && !refreshing;
@@ -119,23 +122,7 @@ export default function ProductsScreen() {
       <AppHeader title="Products" subtitle="Product catalog" showBack showMenu />
       <View style={[styles.content, { paddingHorizontal: layout.padding, maxWidth: layout.contentMaxWidth, alignSelf: layout.isTablet ? 'center' : 'stretch' }]}>
         {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.textPrimary }]}
-            value={searchText}
-            onChangeText={setSearchText}
-            placeholder="Search by name, SKU, or barcode…"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchText.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchText('')}>
-              <MaterialCommunityIcons name="close" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Search by name, SKU, or barcode…" />
 
         {/* Category Filter */}
         {categoriesQuery.data && categoriesQuery.data.length > 0 && (
@@ -189,6 +176,9 @@ export default function ProductsScreen() {
             renderItem={renderItem}
             numColumns={layout.columns}
             key={layout.columns}
+            removeClippedSubviews
+            maxToRenderPerBatch={10}
+            windowSize={10}
             contentContainerStyle={styles.productList}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
             onEndReached={onLoadMore}
@@ -218,17 +208,6 @@ export default function ProductsScreen() {
 
 const styles = StyleSheet.create({
   content: { flex: 1 },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
-    marginBottom: 12,
-  },
-  searchInput: { flex: 1, fontSize: 15, paddingVertical: 2 },
   categoryList: { gap: 8, paddingBottom: 4, marginBottom: 8 },
   categoryChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
   categoryChipText: { fontSize: 13, fontWeight: '500' },

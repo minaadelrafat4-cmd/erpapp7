@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -14,57 +14,17 @@ import { Card } from '@components/Card';
 import { ErrorState } from '@components/ErrorState';
 import { LoadingState } from '@components/LoadingState';
 import { RoleGate } from '@components/RoleGate';
+import { InfoRow, InfoGroup } from '@components/InfoRow';
+import { StatusBadge, PriorityBadge } from '@components/StatusBadge';
+import { DetailHeader } from '@components/DetailHeader';
+import { CardSection } from '@components/SectionHeader';
 import { useThemeStore } from '@store/themeStore';
 import { useTaskDetail, useUpdateTaskStatus } from '@hooks/useERP';
 import { useResponsive } from '@hooks/useResponsive';
 import { useLocalSearchParams } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getIconName } from '@config/icons';
+import { formatDate, isOverdue } from '@lib/format';
 import { navMinRank } from '@constants';
-import type { IconName, ThemeColors } from '@apptypes';
-import type { TaskStatus, TaskPriority } from '@apptypes/erp';
-
-function InfoRow({ label, value, icon, colors }: { label: string; value: string; icon: IconName; colors: ThemeColors }) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLeft}>
-        <MaterialCommunityIcons name={getIconName(icon)} size={18} color={colors.textMuted} />
-        <Text style={[styles.infoLabel, { color: colors.textMuted }]}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{value}</Text>
-    </View>
-  );
-}
-
-function StatusBadge({ status, colors }: { status: TaskStatus; colors: ThemeColors }) {
-  const colorMap: Record<string, string> = {
-    pending: colors.textMuted,
-    in_progress: colors.gold,
-    completed: colors.success,
-    cancelled: colors.error,
-  };
-  const color = colorMap[status] ?? colors.textSecondary;
-  return (
-    <View style={[styles.statusBadge, { backgroundColor: color + '20' }]}>
-      <Text style={[styles.statusText, { color }]}>{status.replace('_', ' ')}</Text>
-    </View>
-  );
-}
-
-function PriorityBadge({ priority, colors }: { priority: TaskPriority; colors: ThemeColors }) {
-  const colorMap: Record<string, string> = {
-    low: colors.textMuted,
-    medium: colors.accent,
-    high: colors.warning,
-    urgent: colors.error,
-  };
-  const color = colorMap[priority] ?? colors.textMuted;
-  return (
-    <View style={[styles.priorityBadge, { backgroundColor: color + '20' }]}>
-      <Text style={[styles.priorityText, { color }]}>{priority}</Text>
-    </View>
-  );
-}
+import type { TaskStatus } from '@apptypes/erp';
 
 export default function TaskDetailScreen() {
   const { colors } = useThemeStore();
@@ -75,10 +35,10 @@ export default function TaskDetailScreen() {
   const taskQuery = useTaskDetail(taskId);
   const updateStatus = useUpdateTaskStatus();
 
-  const [refreshing, setRefreshing] = useState(false);
-  const [updating, setUpdating] = useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [updating, setUpdating] = React.useState(false);
 
-  const onRefresh = useCallback(async () => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
       await taskQuery.refetch();
@@ -134,7 +94,7 @@ export default function TaskDetailScreen() {
   }
 
   const task = taskQuery.data;
-  const overdue = task.due_date && new Date(task.due_date).getTime() < Date.now() && task.status !== 'completed' && task.status !== 'cancelled';
+  const overdue = isOverdue(task.due_date, task.status);
 
   const statusActions: Array<{ status: TaskStatus; label: string }> = [];
   if (task.status === 'pending') {
@@ -156,67 +116,61 @@ export default function TaskDetailScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
         >
           <Card>
-            <View style={styles.headerRow}>
-              <View style={[styles.iconBox, { backgroundColor: colors.surfaceElevated }]}>
-                <MaterialCommunityIcons name={getIconName('tasks')} size={28} color={colors.gold} />
-              </View>
-              <View style={styles.headerInfo}>
-                <Text style={[styles.taskTitle, { color: colors.textPrimary }]}>{task.title}</Text>
+            <DetailHeader
+              icon="tasks"
+              title={task.title}
+              right={
                 <View style={styles.badgeRow}>
-                  <StatusBadge status={task.status} colors={colors} />
-                  <PriorityBadge priority={task.priority} colors={colors} />
+                  <StatusBadge status={task.status} />
+                  <PriorityBadge priority={task.priority} />
                 </View>
-              </View>
-            </View>
+              }
+            />
           </Card>
 
           {task.description ? (
             <Card>
-              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Description</Text>
-              <Text style={[styles.descText, { color: colors.textSecondary }]}>{task.description}</Text>
+              <CardSection title="Description">
+                <Text style={[styles.descText, { color: colors.textSecondary }]}>{task.description}</Text>
+              </CardSection>
             </Card>
           ) : null}
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Task Information</Text>
-            <View style={styles.infoContainer}>
-              <InfoRow label="Status" value={task.status.replace('_', ' ')} icon="clipboard" colors={colors} />
-              <InfoRow label="Priority" value={task.priority} icon="flag" colors={colors} />
-              {task.due_date ? (
-                <InfoRow
-                  label="Due Date"
-                  value={new Date(task.due_date).toLocaleDateString()}
-                  icon="calendar"
-                  colors={colors}
-                />
-              ) : null}
-              <InfoRow label="Created" value={new Date(task.created_at).toLocaleDateString()} icon="calendar" colors={colors} />
-              <InfoRow label="Updated" value={new Date(task.updated_at).toLocaleDateString()} icon="clock" colors={colors} />
-            </View>
+            <CardSection title="Task Information">
+              <InfoGroup>
+                <InfoRow label="Status" value={task.status.replace('_', ' ')} icon="clipboard" />
+                <InfoRow label="Priority" value={task.priority} icon="flag" />
+                {task.due_date ? (
+                  <InfoRow label="Due Date" value={formatDate(task.due_date)} icon="calendar" />
+                ) : null}
+                <InfoRow label="Created" value={formatDate(task.created_at)} icon="calendar" />
+                <InfoRow label="Updated" value={formatDate(task.updated_at)} icon="clock" />
+              </InfoGroup>
+            </CardSection>
           </Card>
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Assignment</Text>
-            <View style={styles.infoContainer}>
-              {task.assigned_employee_name ? (
-                <>
-                  <InfoRow label="Assigned To" value={task.assigned_employee_name} icon="account" colors={colors} />
-                  {task.assigned_employee_email ? (
-                    <InfoRow label="Email" value={task.assigned_employee_email} icon="email" colors={colors} />
-                  ) : null}
-                </>
-              ) : (
-                <View style={styles.unassignedRow}>
-                  <MaterialCommunityIcons name="account-off-outline" size={18} color={colors.textMuted} />
-                  <Text style={[styles.unassignedText, { color: colors.textMuted }]}>No employee assigned</Text>
-                </View>
-              )}
-            </View>
+            <CardSection title="Assignment">
+              <InfoGroup>
+                {task.assigned_employee_name ? (
+                  <>
+                    <InfoRow label="Assigned To" value={task.assigned_employee_name} icon="account" />
+                    {task.assigned_employee_email ? (
+                      <InfoRow label="Email" value={task.assigned_employee_email} icon="email" />
+                    ) : null}
+                  </>
+                ) : (
+                  <View style={styles.unassignedRow}>
+                    <Text style={[styles.unassignedText, { color: colors.textMuted }]}>No employee assigned</Text>
+                  </View>
+                )}
+              </InfoGroup>
+            </CardSection>
           </Card>
 
           {overdue ? (
             <View style={[styles.overdueBanner, { backgroundColor: colors.error + '15' }]}>
-              <MaterialCommunityIcons name="alert-circle" size={20} color={colors.error} />
               <Text style={[styles.overdueText, { color: colors.error }]}>This task is overdue</Text>
             </View>
           ) : null}
@@ -257,22 +211,8 @@ export default function TaskDetailScreen() {
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingBottom: 24 },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
-  iconBox: { width: 56, height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  headerInfo: { flex: 1, gap: 6 },
-  taskTitle: { fontSize: 20, fontWeight: '700', lineHeight: 26 },
   badgeRow: { flexDirection: 'row', gap: 8 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  statusText: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
-  priorityBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  priorityText: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
-  sectionTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
   descText: { fontSize: 14, lineHeight: 20 },
-  infoContainer: { gap: 10 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  infoLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoLabel: { fontSize: 14 },
-  infoValue: { fontSize: 14, fontWeight: '500', maxWidth: 180, textAlign: 'right' },
   unassignedRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   unassignedText: { fontSize: 14, fontStyle: 'italic' },
   overdueBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10 },

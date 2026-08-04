@@ -14,43 +14,18 @@ import { Card } from '@components/Card';
 import { ErrorState } from '@components/ErrorState';
 import { LoadingState } from '@components/LoadingState';
 import { RoleGate } from '@components/RoleGate';
+import { InfoRow, InfoGroup } from '@components/InfoRow';
+import { StatusBadge } from '@components/StatusBadge';
+import { DetailHeader } from '@components/DetailHeader';
+import { CardSection } from '@components/SectionHeader';
+import { SummaryGrid } from '@components/SummaryGrid';
 import { useThemeStore } from '@store/themeStore';
 import { useStockTransferDetail, useUpdateStockTransferStatus } from '@hooks/useERP';
 import { useResponsive } from '@hooks/useResponsive';
 import { useLocalSearchParams } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getIconName } from '@config/icons';
+import { formatDate } from '@lib/format';
 import { navMinRank } from '@constants';
-import type { IconName, ThemeColors } from '@apptypes';
 import type { StockTransferItem, StockTransferStatus } from '@apptypes/erp';
-
-function InfoRow({ label, value, icon, colors }: { label: string; value: string; icon: IconName; colors: ThemeColors }) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLeft}>
-        <MaterialCommunityIcons name={getIconName(icon)} size={18} color={colors.textMuted} />
-        <Text style={[styles.infoLabel, { color: colors.textMuted }]}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{value}</Text>
-    </View>
-  );
-}
-
-function StatusBadge({ status, colors }: { status: StockTransferStatus; colors: ThemeColors }) {
-  const colorMap: Record<string, string> = {
-    draft: colors.textMuted,
-    submitted: colors.accent,
-    in_transit: colors.gold,
-    received: colors.success,
-    cancelled: colors.error,
-  };
-  const color = colorMap[status] ?? colors.textSecondary;
-  return (
-    <View style={[styles.statusBadge, { backgroundColor: color + '20' }]}>
-      <Text style={[styles.statusText, { color }]}>{status.replace('_', ' ')}</Text>
-    </View>
-  );
-}
 
 export default function StockTransferDetailScreen() {
   const { colors } = useThemeStore();
@@ -182,90 +157,82 @@ export default function StockTransferDetailScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
         >
           <Card>
-            <View style={styles.headerRow}>
-              <View style={[styles.iconBox, { backgroundColor: colors.surfaceElevated }]}>
-                <MaterialCommunityIcons name={getIconName('box')} size={28} color={colors.gold} />
-              </View>
-              <View style={styles.headerInfo}>
-                <Text style={[styles.transferNumber, { color: colors.textPrimary }]}>{transfer.transfer_number}</Text>
-                <Text style={[styles.routeSummary, { color: colors.textMuted }]}>
-                  {transfer.source_name} → {transfer.destination_name}
-                </Text>
-              </View>
-              <StatusBadge status={transfer.status} colors={colors} />
-            </View>
+            <DetailHeader
+              icon="box"
+              title={transfer.transfer_number}
+              subtitle={`${transfer.source_name} → ${transfer.destination_name}`}
+              right={<StatusBadge status={transfer.status} />}
+            />
           </Card>
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Transfer Information</Text>
-            <View style={styles.infoContainer}>
-              <InfoRow label="Transfer #" value={transfer.transfer_number} icon="tag" colors={colors} />
-              <InfoRow
-                label="Source"
-                value={`${transfer.source_type === 'branch' ? 'Branch' : 'Warehouse'}: ${transfer.source_name}`}
-                icon={transfer.source_type === 'branch' ? 'store' : 'warehouse'}
-                colors={colors}
-              />
-              <InfoRow
-                label="Destination"
-                value={`${transfer.destination_type === 'branch' ? 'Branch' : 'Warehouse'}: ${transfer.destination_name}`}
-                icon={transfer.destination_type === 'branch' ? 'store' : 'warehouse'}
-                colors={colors}
-              />
-              <InfoRow label="Status" value={transfer.status.replace('_', ' ')} icon="clipboard" colors={colors} />
-              <InfoRow label="Created" value={new Date(transfer.created_at).toLocaleDateString()} icon="calendar" colors={colors} />
-              <InfoRow label="Updated" value={new Date(transfer.updated_at).toLocaleDateString()} icon="clock" colors={colors} />
-            </View>
+            <CardSection title="Transfer Information">
+              <InfoGroup>
+                <InfoRow label="Transfer #" value={transfer.transfer_number} icon="tag" />
+                <InfoRow
+                  label="Source"
+                  value={`${transfer.source_type === 'branch' ? 'Branch' : 'Warehouse'}: ${transfer.source_name}`}
+                  icon={transfer.source_type === 'branch' ? 'store' : 'warehouse'}
+                />
+                <InfoRow
+                  label="Destination"
+                  value={`${transfer.destination_type === 'branch' ? 'Branch' : 'Warehouse'}: ${transfer.destination_name}`}
+                  icon={transfer.destination_type === 'branch' ? 'store' : 'warehouse'}
+                />
+                <InfoRow label="Status" value={transfer.status.replace('_', ' ')} icon="clipboard" />
+                <InfoRow label="Created" value={formatDate(transfer.created_at)} icon="calendar" />
+                <InfoRow label="Updated" value={formatDate(transfer.updated_at)} icon="clock" />
+              </InfoGroup>
+            </CardSection>
           </Card>
 
           {transfer.notes ? (
             <Card>
-              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Notes</Text>
-              <Text style={[styles.notesText, { color: colors.textSecondary }]}>{transfer.notes}</Text>
+              <CardSection title="Notes">
+                <Text style={[styles.notesText, { color: colors.textSecondary }]}>{transfer.notes}</Text>
+              </CardSection>
             </Card>
           ) : null}
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Summary</Text>
-            <View style={styles.summaryGrid}>
-              <View style={[styles.summaryItem, { backgroundColor: colors.surfaceElevated }]}>
-                <Text style={[styles.summaryItemLabel, { color: colors.textMuted }]}>Total Items</Text>
-                <Text style={[styles.summaryItemValue, { color: colors.textPrimary }]}>{transfer.total_items}</Text>
-              </View>
-              <View style={[styles.summaryItem, { backgroundColor: colors.surfaceElevated }]}>
-                <Text style={[styles.summaryItemLabel, { color: colors.textMuted }]}>Total Quantity</Text>
-                <Text style={[styles.summaryItemValue, { color: colors.gold }]}>{transfer.total_quantity}</Text>
-              </View>
-            </View>
+            <CardSection title="Summary">
+              <SummaryGrid
+                items={[
+                  { label: 'Total Items', value: transfer.total_items },
+                  { label: 'Total Quantity', value: transfer.total_quantity, highlight: true, highlightColor: colors.gold },
+                ]}
+              />
+            </CardSection>
           </Card>
 
           <Card>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Product List</Text>
-            {transfer.items.length === 0 ? (
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>No items in this transfer.</Text>
-            ) : (
-              <View style={styles.itemsList}>
-                {transfer.items.map((item: StockTransferItem) => (
-                  <View key={item.id} style={styles.itemRow}>
-                    <View style={styles.itemLeft}>
-                      <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={2}>{item.product_name}</Text>
-                      {item.sku && <Text style={[styles.itemSku, { color: colors.textMuted }]} numberOfLines={1}>SKU: {item.sku}</Text>}
-                      <Text style={[styles.itemQty, { color: colors.textSecondary }]}>
-                        Qty: {item.quantity}
-                        {item.received_quantity > 0 && (
-                          <Text style={[{ color: item.received_quantity >= item.quantity ? colors.success : colors.warning }]}>
-                            {' · '}Received: {item.received_quantity}/{item.quantity}
-                          </Text>
-                        )}
-                      </Text>
+            <CardSection title="Product List">
+              {transfer.items.length === 0 ? (
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>No items in this transfer.</Text>
+              ) : (
+                <View style={styles.itemsList}>
+                  {transfer.items.map((item: StockTransferItem) => (
+                    <View key={item.id} style={styles.itemRow}>
+                      <View style={styles.itemLeft}>
+                        <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={2}>{item.product_name}</Text>
+                        {item.sku && <Text style={[styles.itemSku, { color: colors.textMuted }]} numberOfLines={1}>SKU: {item.sku}</Text>}
+                        <Text style={[styles.itemQty, { color: colors.textSecondary }]}>
+                          Qty: {item.quantity}
+                          {item.received_quantity > 0 && (
+                            <Text style={[{ color: item.received_quantity >= item.quantity ? colors.success : colors.warning }]}>
+                              {' · '}Received: {item.received_quantity}/{item.quantity}
+                            </Text>
+                          )}
+                        </Text>
+                      </View>
+                      <View style={[styles.qtyBadge, { backgroundColor: colors.gold + '20' }]}>
+                        <Text style={[styles.qtyBadgeText, { color: colors.gold }]}>{item.quantity}</Text>
+                      </View>
                     </View>
-                    <View style={[styles.qtyBadge, { backgroundColor: colors.gold + '20' }]}>
-                      <Text style={[styles.qtyBadgeText, { color: colors.gold }]}>{item.quantity}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
+                  ))}
+                </View>
+              )}
+            </CardSection>
           </Card>
 
           {renderStatusActions()}
@@ -278,24 +245,7 @@ export default function StockTransferDetailScreen() {
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingBottom: 24 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  iconBox: { width: 56, height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  headerInfo: { flex: 1, gap: 2 },
-  transferNumber: { fontSize: 20, fontWeight: '700', fontFamily: 'monospace', lineHeight: 26 },
-  routeSummary: { fontSize: 13 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  statusText: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
-  sectionTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
-  infoContainer: { gap: 10 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  infoLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoLabel: { fontSize: 14 },
-  infoValue: { fontSize: 14, fontWeight: '500', maxWidth: 180, textAlign: 'right' },
   notesText: { fontSize: 14, lineHeight: 20 },
-  summaryGrid: { flexDirection: 'row', gap: 10 },
-  summaryItem: { flex: 1, borderRadius: 10, padding: 14, alignItems: 'center', gap: 4 },
-  summaryItemLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  summaryItemValue: { fontSize: 22, fontWeight: '700' },
   emptyText: { fontSize: 14, fontStyle: 'italic' },
   itemsList: { gap: 12 },
   itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.05)' },

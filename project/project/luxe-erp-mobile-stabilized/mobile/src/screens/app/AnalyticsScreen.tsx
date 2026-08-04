@@ -18,6 +18,7 @@ import { useAnalyticsSummary } from '@hooks/useERP';
 import { useResponsive } from '@hooks/useResponsive';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getIconName } from '@config/icons';
+import { formatCompactCurrency, formatNumber } from '@lib/format';
 import { navMinRank } from '@constants';
 import type { ThemeColors } from '@apptypes';
 import type {
@@ -27,16 +28,6 @@ import type {
   BranchComparisonRow,
   ProductPerformanceRow,
 } from '@apptypes/erp';
-
-function formatCurrency(amount: number): string {
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(1)}K`;
-  return `$${amount.toFixed(0)}`;
-}
-
-function formatNumber(n: number): string {
-  return n.toLocaleString('en-US');
-}
 
 function SectionHeader({ title, icon, colors }: { title: string; icon: string; colors: ThemeColors }) {
   return (
@@ -141,10 +132,10 @@ export default function AnalyticsScreen() {
               <Card>
                 <SectionHeader title="Sales Overview" icon="trending-up" colors={colors} />
                 <View style={styles.kpiGrid}>
-                  <KpiCard label="Total Revenue" value={formatCurrency(totalRevenue)} colors={colors} highlight />
+                  <KpiCard label="Total Revenue" value={formatCompactCurrency(totalRevenue)} colors={colors} highlight />
                   <KpiCard label="Total Orders" value={formatNumber(totalOrders)} colors={colors} />
                   <KpiCard label="Items Sold" value={formatNumber(totalItemsSold)} colors={colors} />
-                  <KpiCard label="Avg Order Value" value={formatCurrency(avgOrderValue)} colors={colors} />
+                  <KpiCard label="Avg Order Value" value={formatCompactCurrency(avgOrderValue)} colors={colors} />
                 </View>
 
                 {data.salesOverview.length > 0 && (
@@ -155,7 +146,7 @@ export default function AnalyticsScreen() {
                         <Text style={[styles.dailyDate, { color: colors.textSecondary }]}>
                           {new Date(row.sale_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </Text>
-                        <Text style={[styles.dailyRevenue, { color: colors.gold }]}>{formatCurrency(Number(row.total_revenue))}</Text>
+                        <Text style={[styles.dailyRevenue, { color: colors.gold }]}>{formatCompactCurrency(Number(row.total_revenue))}</Text>
                         <Text style={[styles.dailyOrders, { color: colors.textMuted }]}>{row.order_count} orders</Text>
                       </View>
                     ))}
@@ -167,9 +158,9 @@ export default function AnalyticsScreen() {
               <Card>
                 <SectionHeader title="Inventory Overview" icon="box" colors={colors} />
                 <View style={styles.kpiGrid}>
-                  <KpiCard label="Retail Value" value={formatCurrency(totalInventoryValue)} colors={colors} highlight />
-                  <KpiCard label="Cost Value" value={formatCurrency(totalInventoryCost)} colors={colors} />
-                  <KpiCard label="Potential Profit" value={formatCurrency(totalPotentialProfit)} colors={colors} />
+                  <KpiCard label="Retail Value" value={formatCompactCurrency(totalInventoryValue)} colors={colors} highlight />
+                  <KpiCard label="Cost Value" value={formatCompactCurrency(totalInventoryCost)} colors={colors} />
+                  <KpiCard label="Potential Profit" value={formatCompactCurrency(totalPotentialProfit)} colors={colors} />
                 </View>
 
                 {data.inventoryValue.length > 0 && (
@@ -182,7 +173,7 @@ export default function AnalyticsScreen() {
                           {row.sku && <Text style={[styles.topSku, { color: colors.textMuted }]} numberOfLines={1}>{row.sku}</Text>}
                         </View>
                         <View style={styles.topValues}>
-                          <Text style={[styles.topValue, { color: colors.gold }]}>{formatCurrency(Number(row.total_retail_value))}</Text>
+                          <Text style={[styles.topValue, { color: colors.gold }]}>{formatCompactCurrency(Number(row.total_retail_value))}</Text>
                           <Text style={[styles.topStock, { color: colors.textMuted }]}>{row.stock} units</Text>
                         </View>
                       </View>
@@ -252,7 +243,7 @@ export default function AnalyticsScreen() {
                         {row.city && <Text style={[styles.branchCompCity, { color: colors.textMuted }]} numberOfLines={1}>{row.city}</Text>}
                       </View>
                       <View style={styles.branchCompStats}>
-                        <Text style={[styles.branchCompRevenue, { color: colors.gold }]}>{formatCurrency(Number(row.total_revenue))}</Text>
+                        <Text style={[styles.branchCompRevenue, { color: colors.gold }]}>{formatCompactCurrency(Number(row.total_revenue))}</Text>
                         <Text style={[styles.branchCompOrders, { color: colors.textMuted }]}>{row.order_count} orders</Text>
                       </View>
                     </View>
@@ -276,7 +267,7 @@ export default function AnalyticsScreen() {
                         )}
                       </View>
                       <View style={styles.prodPerfStats}>
-                        <Text style={[styles.prodPerfRevenue, { color: colors.gold }]}>{formatCurrency(Number(row.total_revenue))}</Text>
+                        <Text style={[styles.prodPerfRevenue, { color: colors.gold }]}>{formatCompactCurrency(Number(row.total_revenue))}</Text>
                         <Text style={[styles.prodPerfQty, { color: colors.textMuted }]}>{row.total_qty_sold} sold</Text>
                       </View>
                     </View>

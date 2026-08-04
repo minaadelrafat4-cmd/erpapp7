@@ -5,12 +5,12 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import { ScreenWrapper } from '@components/ScreenWrapper';
 import { AppHeader } from '@components/AppHeader';
+import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { RoleGate } from '@components/RoleGate';
@@ -61,28 +61,31 @@ export default function CategoriesScreen() {
     }
   }, [categoriesQuery]);
 
-  const renderItem = ({ item }: { item: CategoryWithCount }) => (
-    <TouchableOpacity
-      style={[styles.categoryCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}
-      activeOpacity={0.7}
-      onPress={() => router.push({ pathname: '/(app)/categories/[id]', params: { id: item.id } } as never)}
-    >
-      <View style={[styles.iconBox, { backgroundColor: colors.surfaceElevated }]}>
-        <MaterialCommunityIcons name={getIconName('categories')} size={32} color={colors.gold} />
-      </View>
-      <View style={styles.categoryInfo}>
-        <Text style={[styles.categoryName, { color: colors.textPrimary }]} numberOfLines={2}>{item.name}</Text>
-        {item.description && (
-          <Text style={[styles.categoryDesc, { color: colors.textMuted }]} numberOfLines={2}>{item.description}</Text>
-        )}
-        <View style={[styles.countBadge, { backgroundColor: colors.gold + '20' }]}>
-          <Text style={[styles.countText, { color: colors.gold }]}>
-            {item.product_count} {item.product_count === 1 ? 'product' : 'products'}
-          </Text>
+  const renderItem = useCallback(
+    ({ item }: { item: CategoryWithCount }) => (
+      <TouchableOpacity
+        style={[styles.categoryCard, { backgroundColor: colors.surface, borderColor: colors.border, width: cardWidth }]}
+        activeOpacity={0.7}
+        onPress={() => router.push({ pathname: '/(app)/categories/[id]', params: { id: item.id } } as never)}
+      >
+        <View style={[styles.iconBox, { backgroundColor: colors.surfaceElevated }]}>
+          <MaterialCommunityIcons name={getIconName('categories')} size={32} color={colors.gold} />
         </View>
-      </View>
-      <MaterialCommunityIcons name={getIconName('chevron-right')} size={20} color={colors.textMuted} />
-    </TouchableOpacity>
+        <View style={styles.categoryInfo}>
+          <Text style={[styles.categoryName, { color: colors.textPrimary }]} numberOfLines={2}>{item.name}</Text>
+          {item.description && (
+            <Text style={[styles.categoryDesc, { color: colors.textMuted }]} numberOfLines={2}>{item.description}</Text>
+          )}
+          <View style={[styles.countBadge, { backgroundColor: colors.gold + '20' }]}>
+            <Text style={[styles.countText, { color: colors.gold }]}>
+              {item.product_count} {item.product_count === 1 ? 'product' : 'products'}
+            </Text>
+          </View>
+        </View>
+        <MaterialCommunityIcons name={getIconName('chevron-right')} size={20} color={colors.textMuted} />
+      </TouchableOpacity>
+    ),
+    [cardWidth, colors, router],
   );
 
   const showLoading = categoriesQuery.isLoading && !refreshing;
@@ -93,23 +96,7 @@ export default function CategoriesScreen() {
       <ScreenWrapper>
         <AppHeader title="Categories" subtitle="Product categories" showBack showMenu />
         <View style={[styles.content, { paddingHorizontal: layout.padding, maxWidth: layout.contentMaxWidth, alignSelf: layout.isTablet ? 'center' : 'stretch' }]}>
-          <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.textPrimary }]}
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Search categories…"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')}>
-                <MaterialCommunityIcons name="close" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Search categories…" />
 
           {showLoading && (
             <View style={styles.centerState}>
@@ -135,6 +122,9 @@ export default function CategoriesScreen() {
               renderItem={renderItem}
               numColumns={layout.columns}
               key={layout.columns}
+              removeClippedSubviews
+              maxToRenderPerBatch={10}
+              windowSize={10}
               contentContainerStyle={styles.list}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} colors={[colors.gold]} />}
               ListEmptyComponent={
@@ -156,17 +146,6 @@ export default function CategoriesScreen() {
 
 const styles = StyleSheet.create({
   content: { flex: 1 },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
-    marginBottom: 12,
-  },
-  searchInput: { flex: 1, fontSize: 15, paddingVertical: 2 },
   list: { gap: 12, paddingBottom: 24 },
   categoryCard: {
     borderRadius: 12,
