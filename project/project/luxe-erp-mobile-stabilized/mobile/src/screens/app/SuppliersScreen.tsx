@@ -13,9 +13,11 @@ import { AppHeader } from '@components/AppHeader';
 import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
+import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
 import { RoleGate } from '@components/RoleGate';
 import { useThemeStore } from '@store/themeStore';
 import { useSuppliers } from '@hooks/useERP';
+import type { SortOrder } from '@services/erpService';
 import { useResponsive, getCardWidth } from '@hooks/useResponsive';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -24,6 +26,15 @@ import { navMinRank } from '@constants';
 import type { SupplierListItem } from '@apptypes/erp';
 
 const DEBOUNCE_MS = 300;
+const DEFAULT_SORT_BY = 'created_at';
+const DEFAULT_SORT_ORDER: SortOrder = 'desc';
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: 'Name', value: 'name' },
+  { label: 'Active', value: 'is_active' },
+  { label: 'City', value: 'city' },
+  { label: 'Newest', value: 'created_at' },
+];
 
 export default function SuppliersScreen() {
   const { colors } = useThemeStore();
@@ -32,6 +43,8 @@ export default function SuppliersScreen() {
 
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sortBy, setSortBy] = useState(DEFAULT_SORT_BY);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(DEFAULT_SORT_ORDER);
   const [refreshing, setRefreshing] = useState(false);
 
   React.useEffect(() => {
@@ -39,7 +52,7 @@ export default function SuppliersScreen() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  const suppliersQuery = useSuppliers(debouncedSearch);
+  const suppliersQuery = useSuppliers(debouncedSearch, sortBy, sortOrder);
 
   const allSuppliers = useMemo(() => {
     return suppliersQuery.data?.pages.flatMap((page) => page.items) ?? [];
@@ -104,6 +117,23 @@ export default function SuppliersScreen() {
         <View style={[styles.content, { paddingHorizontal: layout.padding, maxWidth: layout.contentMaxWidth, alignSelf: layout.isTablet ? 'center' : 'stretch' }]}>
           <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Search by name or contact…" />
 
+          <SortControl
+            options={SORT_OPTIONS}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
+          />
+
+          <ClearFiltersButton
+            visible={debouncedSearch.trim() !== '' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+            onClear={() => {
+              setSearchText('');
+              setDebouncedSearch('');
+              setSortBy(DEFAULT_SORT_BY);
+              setSortOrder(DEFAULT_SORT_ORDER);
+            }}
+          />
+
           {showLoading && (
             <View style={styles.centerState}>
               <ActivityIndicator size="large" color={colors.gold} />
@@ -140,7 +170,7 @@ export default function SuppliersScreen() {
                   <EmptyState
                     icon="suppliers"
                     title="No Suppliers Found"
-                    message={debouncedSearch ? `No suppliers match "${debouncedSearch}".` : 'No suppliers have been set up yet.'}
+                    message={debouncedSearch.trim() !== '' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER ? 'No results match your filters. Try clearing them.' : 'No suppliers have been set up yet.'}
                   />
                 </View>
               }

@@ -35,6 +35,10 @@ import {
   fetchStockTransfers,
   fetchStockTransferById,
   updateStockTransferStatus,
+  fetchUserSettings,
+  updateUserSettings,
+  changePassword,
+  type SortOrder,
   type PurchaseOrderListParams,
   type SalesOrderListParams,
   type ProductListResult,
@@ -44,6 +48,7 @@ import {
   type ReceivingListParams,
   type TaskListParams,
   type StockTransferListParams,
+  type UserSettings,
 } from '@services/erpService';
 import type {
   DashboardSummary,
@@ -100,7 +105,7 @@ export const erpKeys = {
   dashboard: ['erp', 'dashboard'] as const,
   notifications: (limit: number) => ['erp', 'notifications', limit] as const,
   products: ['erp', 'products'] as const,
-  productsList: (search: string, categoryId: string | null) => ['erp', 'products', 'list', search, categoryId] as const,
+  productsList: (search: string, categoryId: string | null, sortBy?: string, sortOrder?: SortOrder) => ['erp', 'products', 'list', search, categoryId, sortBy ?? 'created_at', sortOrder ?? 'desc'] as const,
   product: (id: string) => ['erp', 'products', 'detail', id] as const,
   categories: ['erp', 'categories'] as const,
   category: (id: string) => ['erp', 'categories', 'detail', id] as const,
@@ -176,15 +181,17 @@ export function useRecentNotifications(userId: string | null | undefined, limit 
 // Product Hooks
 // ============================================================
 
-export function useProducts(search: string, categoryId: string | null) {
+export function useProducts(search: string, categoryId: string | null, sortBy?: string, sortOrder?: SortOrder) {
   return useInfiniteQuery<ProductListResult>({
-    queryKey: erpKeys.productsList(search, categoryId ?? 'all'),
+    queryKey: erpKeys.productsList(search, categoryId ?? 'all', sortBy ?? 'created_at', sortOrder ?? 'desc'),
     queryFn: ({ pageParam }) =>
       fetchProducts({
         search: search || undefined,
         categoryId: categoryId ?? undefined,
         cursor: (pageParam as string | null) ?? null,
         limit: APP_CONFIG.itemsPerPage,
+        sortBy: sortBy ?? 'created_at',
+        sortOrder: sortOrder ?? 'desc',
       }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -207,10 +214,10 @@ export type { ProductListItem, ProductListResult } from '@services/erpService';
 // Category Hooks
 // ============================================================
 
-export function useCategories() {
+export function useCategories(sortBy?: string, sortOrder?: SortOrder) {
   return useQuery<CategoryWithCount[]>({
-    queryKey: erpKeys.categories,
-    queryFn: () => cachedQuery('categories', fetchCategoriesWithCounts, 5 * 60_000),
+    queryKey: [...erpKeys.categories, sortBy ?? 'sort_order', sortOrder ?? 'asc'] as const,
+    queryFn: () => cachedQuery(`categories_${sortBy ?? 'sort_order'}_${sortOrder ?? 'asc'}`, () => fetchCategoriesWithCounts({ sortBy, sortOrder }), 5 * 60_000),
     staleTime: 5 * 60_000,
   });
 }
@@ -241,10 +248,10 @@ export function useInventory(filters: InventoryFilter = {}) {
 // Branches & Warehouses Hooks
 // ============================================================
 
-export function useBranches() {
+export function useBranches(sortBy?: string, sortOrder?: SortOrder) {
   return useQuery<Branch[]>({
-    queryKey: erpKeys.branches,
-    queryFn: () => cachedQuery('branches', fetchBranches, 5 * 60_000),
+    queryKey: [...erpKeys.branches, sortBy ?? 'name', sortOrder ?? 'asc'] as const,
+    queryFn: () => cachedQuery(`branches_${sortBy ?? 'name'}_${sortOrder ?? 'asc'}`, () => fetchBranches({ sortBy, sortOrder }), 5 * 60_000),
     staleTime: 5 * 60_000,
   });
 }
@@ -258,10 +265,10 @@ export function useBranchDetail(id: string | null) {
   });
 }
 
-export function useWarehouses() {
+export function useWarehouses(sortBy?: string, sortOrder?: SortOrder) {
   return useQuery<Warehouse[]>({
-    queryKey: erpKeys.warehouses,
-    queryFn: () => cachedQuery('warehouses', fetchWarehouses, 5 * 60_000),
+    queryKey: [...erpKeys.warehouses, sortBy ?? 'name', sortOrder ?? 'asc'] as const,
+    queryFn: () => cachedQuery(`warehouses_${sortBy ?? 'name'}_${sortOrder ?? 'asc'}`, () => fetchWarehouses({ sortBy, sortOrder }), 5 * 60_000),
     staleTime: 5 * 60_000,
   });
 }
@@ -347,14 +354,16 @@ export function useUploadAvatar() {
 // Customer Hooks
 // ============================================================
 
-export function useCustomers(search: string) {
+export function useCustomers(search: string, sortBy?: string, sortOrder?: SortOrder) {
   return useInfiniteQuery<CustomerListResult>({
-    queryKey: erpKeys.customersList(search),
+    queryKey: [...erpKeys.customersList(search), sortBy ?? 'created_at', sortOrder ?? 'desc'] as const,
     queryFn: ({ pageParam }) =>
       fetchCustomers({
         search: search || undefined,
         cursor: (pageParam as string | null) ?? null,
         limit: APP_CONFIG.itemsPerPage,
+        sortBy: sortBy ?? 'created_at',
+        sortOrder: sortOrder ?? 'desc',
       }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -377,14 +386,16 @@ export type { CustomerListItem, CustomerListResult } from '@services/erpService'
 // Supplier Hooks
 // ============================================================
 
-export function useSuppliers(search: string) {
+export function useSuppliers(search: string, sortBy?: string, sortOrder?: SortOrder) {
   return useInfiniteQuery<SupplierListResult>({
-    queryKey: erpKeys.suppliersList(search),
+    queryKey: [...erpKeys.suppliersList(search), sortBy ?? 'created_at', sortOrder ?? 'desc'] as const,
     queryFn: ({ pageParam }) =>
       fetchSuppliers({
         search: search || undefined,
         cursor: (pageParam as string | null) ?? null,
         limit: APP_CONFIG.itemsPerPage,
+        sortBy: sortBy ?? 'created_at',
+        sortOrder: sortOrder ?? 'desc',
       }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -407,15 +418,17 @@ export type { SupplierListItem, SupplierListResult } from '@services/erpService'
 // Purchase Order Hooks
 // ============================================================
 
-export function usePurchaseOrders(search: string, status: string) {
+export function usePurchaseOrders(search: string, status: string, sortBy?: string, sortOrder?: SortOrder) {
   return useInfiniteQuery<PurchaseOrderListResult>({
-    queryKey: erpKeys.purchaseOrdersList(search, status),
+    queryKey: [...erpKeys.purchaseOrdersList(search, status), sortBy ?? 'created_at', sortOrder ?? 'desc'] as const,
     queryFn: ({ pageParam }) =>
       fetchPurchaseOrders({
         search: search || undefined,
         status: status || undefined,
         cursor: (pageParam as string | null) ?? null,
         limit: APP_CONFIG.itemsPerPage,
+        sortBy: sortBy ?? 'created_at',
+        sortOrder: sortOrder ?? 'desc',
       } satisfies PurchaseOrderListParams),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -438,15 +451,17 @@ export type { PurchaseOrderListItem, PurchaseOrderListResult };
 // Sales Order Hooks
 // ============================================================
 
-export function useSalesOrders(search: string, status: string) {
+export function useSalesOrders(search: string, status: string, sortBy?: string, sortOrder?: SortOrder) {
   return useInfiniteQuery<SalesOrderListResult>({
-    queryKey: erpKeys.salesOrdersList(search, status),
+    queryKey: [...erpKeys.salesOrdersList(search, status), sortBy ?? 'placed_at', sortOrder ?? 'desc'] as const,
     queryFn: ({ pageParam }) =>
       fetchSalesOrders({
         search: search || undefined,
         status: status || undefined,
         cursor: (pageParam as string | null) ?? null,
         limit: APP_CONFIG.itemsPerPage,
+        sortBy: sortBy ?? 'placed_at',
+        sortOrder: sortOrder ?? 'desc',
       } satisfies SalesOrderListParams),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -469,14 +484,16 @@ export type { SalesOrderListItem, SalesOrderListResult };
 // Employee Hooks
 // ============================================================
 
-export function useEmployees(search: string) {
+export function useEmployees(search: string, sortBy?: string, sortOrder?: SortOrder) {
   return useInfiniteQuery<EmployeeListResult>({
-    queryKey: erpKeys.employeesList(search),
+    queryKey: [...erpKeys.employeesList(search), sortBy ?? 'created_at', sortOrder ?? 'desc'] as const,
     queryFn: ({ pageParam }) =>
       fetchEmployees({
         search: search || undefined,
         cursor: (pageParam as string | null) ?? null,
         limit: APP_CONFIG.itemsPerPage,
+        sortBy: sortBy ?? 'created_at',
+        sortOrder: sortOrder ?? 'desc',
       } satisfies EmployeeListParams),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -499,14 +516,16 @@ export type { EmployeeListItem, EmployeeListResult };
 // Report Hooks
 // ============================================================
 
-export function useReports(search: string) {
+export function useReports(search: string, sortBy?: string, sortOrder?: SortOrder) {
   return useInfiniteQuery<ReportListResult>({
-    queryKey: erpKeys.reportsList(search),
+    queryKey: [...erpKeys.reportsList(search), sortBy ?? 'created_at', sortOrder ?? 'desc'] as const,
     queryFn: ({ pageParam }) =>
       fetchReports({
         search: search || undefined,
         cursor: (pageParam as string | null) ?? null,
         limit: APP_CONFIG.itemsPerPage,
+        sortBy: sortBy ?? 'created_at',
+        sortOrder: sortOrder ?? 'desc',
       } satisfies ReportListParams),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -532,15 +551,17 @@ export function useAnalyticsSummary() {
 // Receiving Hooks
 // ============================================================
 
-export function useReceivingList(search: string, status: string) {
+export function useReceivingList(search: string, status: string, sortBy?: string, sortOrder?: SortOrder) {
   return useInfiniteQuery<ReceivingListResult>({
-    queryKey: erpKeys.receivingList(search, status),
+    queryKey: [...erpKeys.receivingList(search, status), sortBy ?? 'created_at', sortOrder ?? 'desc'] as const,
     queryFn: ({ pageParam }) =>
       fetchReceivingList({
         search: search || undefined,
         status: status || undefined,
         cursor: (pageParam as string | null) ?? null,
         limit: APP_CONFIG.itemsPerPage,
+        sortBy: sortBy ?? 'created_at',
+        sortOrder: sortOrder ?? 'desc',
       } satisfies ReceivingListParams),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -580,9 +601,9 @@ export function useCompleteReceiving() {
 // Task Hooks
 // ============================================================
 
-export function useTasks(search: string, status: string, priority: string) {
+export function useTasks(search: string, status: string, priority: string, sortBy?: string, sortOrder?: SortOrder) {
   return useInfiniteQuery<TaskListResult>({
-    queryKey: erpKeys.tasksList(search, status, priority),
+    queryKey: [...erpKeys.tasksList(search, status, priority), sortBy ?? 'created_at', sortOrder ?? 'desc'] as const,
     queryFn: ({ pageParam }) =>
       fetchTasks({
         search: search || undefined,
@@ -590,6 +611,8 @@ export function useTasks(search: string, status: string, priority: string) {
         priority: priority || undefined,
         cursor: (pageParam as string | null) ?? null,
         limit: APP_CONFIG.itemsPerPage,
+        sortBy: sortBy ?? 'created_at',
+        sortOrder: sortOrder ?? 'desc',
       } satisfies TaskListParams),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -619,15 +642,17 @@ export function useUpdateTaskStatus() {
 // Stock Transfer Hooks
 // ============================================================
 
-export function useStockTransfers(search: string, status: string) {
+export function useStockTransfers(search: string, status: string, sortBy?: string, sortOrder?: SortOrder) {
   return useInfiniteQuery<StockTransferListResult>({
-    queryKey: erpKeys.stockTransfersList(search, status),
+    queryKey: [...erpKeys.stockTransfersList(search, status), sortBy ?? 'created_at', sortOrder ?? 'desc'] as const,
     queryFn: ({ pageParam }) =>
       fetchStockTransfers({
         search: search || undefined,
         status: status || undefined,
         cursor: (pageParam as string | null) ?? null,
         limit: APP_CONFIG.itemsPerPage,
+        sortBy: sortBy ?? 'created_at',
+        sortOrder: sortOrder ?? 'desc',
       } satisfies StockTransferListParams),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -652,7 +677,33 @@ export function useUpdateStockTransferStatus() {
   };
 }
 
-export { fetchProductIdByBarcode };
+export { fetchProductIdByBarcode, type SortOrder, type UserSettings };
+
+// ============================================================
+// User Settings Hooks
+// ============================================================
+
+export function useUserSettings(userId: string | null) {
+  return useQuery<UserSettings | null>({
+    queryKey: ['erp', 'user-settings', userId ?? ''] as const,
+    queryFn: () => cachedQuery(`user_settings_${userId}`, () => fetchUserSettings(userId!), 60_000),
+    enabled: !!userId,
+    staleTime: 60_000,
+  });
+}
+
+export function useUpdateUserSettings() {
+  return async (userId: string, updates: Partial<UserSettings>): Promise<void> => {
+    await updateUserSettings(userId, updates);
+    await queryClient.invalidateQueries({ queryKey: ['erp', 'user-settings', userId] });
+  };
+}
+
+export function useChangePassword() {
+  return async (currentPassword: string, newPassword: string): Promise<void> => {
+    await changePassword(currentPassword, newPassword);
+  };
+}
 
 // ============================================================
 // POS Checkout Hook

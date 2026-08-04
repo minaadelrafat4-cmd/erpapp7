@@ -13,9 +13,11 @@ import { AppHeader } from '@components/AppHeader';
 import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
+import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
 import { RoleGate } from '@components/RoleGate';
 import { useThemeStore } from '@store/themeStore';
 import { useInventory, useBranches, useWarehouses, useCategories } from '@hooks/useERP';
+import type { SortOrder } from '@services/erpService';
 import { useResponsive, getCardWidth } from '@hooks/useResponsive';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getIconName } from '@config/icons';
@@ -24,6 +26,14 @@ import type { InventoryItemWithStatus } from '@apptypes/erp';
 import type { ThemeColors } from '@apptypes';
 
 const DEBOUNCE_MS = 300;
+const DEFAULT_SORT_BY = 'updated_at';
+const DEFAULT_SORT_ORDER: SortOrder = 'desc';
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: 'Product', value: 'product_name' },
+  { label: 'Stock', value: 'quantity_on_hand' },
+  { label: 'Updated', value: 'updated_at' },
+];
 
 type FilterType = 'branch' | 'warehouse' | 'category';
 
@@ -37,6 +47,8 @@ export default function InventoryScreen() {
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState(DEFAULT_SORT_BY);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(DEFAULT_SORT_ORDER);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchText), DEBOUNCE_MS);
@@ -47,6 +59,8 @@ export default function InventoryScreen() {
     branchId: selectedBranch ?? undefined,
     warehouseId: selectedWarehouse ?? undefined,
     categoryId: selectedCategory ?? undefined,
+    sortBy,
+    sortOrder,
   });
   const branchesQuery = useBranches();
   const warehousesQuery = useWarehouses();
@@ -190,6 +204,26 @@ export default function InventoryScreen() {
             renderFilterChips(categoriesQuery.data, selectedCategory, setSelectedCategory, 'All Categories')
           )}
 
+          <SortControl
+            options={SORT_OPTIONS}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
+          />
+
+          <ClearFiltersButton
+            visible={debouncedSearch.trim() !== '' || selectedBranch !== null || selectedWarehouse !== null || selectedCategory !== null || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+            onClear={() => {
+              setSearchText('');
+              setDebouncedSearch('');
+              setSelectedBranch(null);
+              setSelectedWarehouse(null);
+              setSelectedCategory(null);
+              setSortBy(DEFAULT_SORT_BY);
+              setSortOrder(DEFAULT_SORT_ORDER);
+            }}
+          />
+
           {showLoading && (
             <View style={styles.centerState}>
               <ActivityIndicator size="large" color={colors.gold} />
@@ -224,7 +258,7 @@ export default function InventoryScreen() {
                   <EmptyState
                     icon="inventory"
                     title="No Inventory Found"
-                    message={debouncedSearch ? `No items match "${debouncedSearch}".` : 'No inventory records found for the selected filters.'}
+                    message={debouncedSearch.trim() !== '' || selectedBranch !== null || selectedWarehouse !== null || selectedCategory !== null || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER ? 'No results match your filters. Try clearing them.' : 'No inventory records found for the selected filters.'}
                   />
                 </View>
               }

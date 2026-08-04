@@ -13,9 +13,11 @@ import { AppHeader } from '@components/AppHeader';
 import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
+import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
 import { RoleGate } from '@components/RoleGate';
 import { useThemeStore } from '@store/themeStore';
 import { useCategories } from '@hooks/useERP';
+import type { SortOrder } from '@services/erpService';
 import { useResponsive, getCardWidth } from '@hooks/useResponsive';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -24,6 +26,15 @@ import { navMinRank } from '@constants';
 import type { CategoryWithCount } from '@apptypes/erp';
 
 const DEBOUNCE_MS = 300;
+const DEFAULT_SORT_BY = 'sort_order';
+const DEFAULT_SORT_ORDER: SortOrder = 'asc';
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: 'Name', value: 'name' },
+  { label: 'Featured', value: 'is_featured' },
+  { label: 'Sort Order', value: 'sort_order' },
+  { label: 'Newest', value: 'created_at' },
+];
 
 export default function CategoriesScreen() {
   const { colors } = useThemeStore();
@@ -32,6 +43,8 @@ export default function CategoriesScreen() {
 
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sortBy, setSortBy] = useState(DEFAULT_SORT_BY);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(DEFAULT_SORT_ORDER);
   const [refreshing, setRefreshing] = useState(false);
 
   React.useEffect(() => {
@@ -39,7 +52,7 @@ export default function CategoriesScreen() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  const categoriesQuery = useCategories();
+  const categoriesQuery = useCategories(sortBy, sortOrder);
 
   const filteredCategories = useMemo(() => {
     const all = categoriesQuery.data ?? [];
@@ -98,6 +111,23 @@ export default function CategoriesScreen() {
         <View style={[styles.content, { paddingHorizontal: layout.padding, maxWidth: layout.contentMaxWidth, alignSelf: layout.isTablet ? 'center' : 'stretch' }]}>
           <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Search categories…" />
 
+          <SortControl
+            options={SORT_OPTIONS}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
+          />
+
+          <ClearFiltersButton
+            visible={debouncedSearch.trim() !== '' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+            onClear={() => {
+              setSearchText('');
+              setDebouncedSearch('');
+              setSortBy(DEFAULT_SORT_BY);
+              setSortOrder(DEFAULT_SORT_ORDER);
+            }}
+          />
+
           {showLoading && (
             <View style={styles.centerState}>
               <ActivityIndicator size="large" color={colors.gold} />
@@ -132,7 +162,7 @@ export default function CategoriesScreen() {
                   <EmptyState
                     icon="categories"
                     title="No Categories Found"
-                    message={debouncedSearch ? `No categories match "${debouncedSearch}".` : 'No categories have been created yet.'}
+                    message={debouncedSearch.trim() !== '' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER ? 'No results match your filters. Try clearing them.' : 'No categories have been created yet.'}
                   />
                 </View>
               }

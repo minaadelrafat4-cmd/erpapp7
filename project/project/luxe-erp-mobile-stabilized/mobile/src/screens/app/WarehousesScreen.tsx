@@ -13,9 +13,11 @@ import { AppHeader } from '@components/AppHeader';
 import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
+import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
 import { RoleGate } from '@components/RoleGate';
 import { useThemeStore } from '@store/themeStore';
 import { useWarehouses } from '@hooks/useERP';
+import type { SortOrder } from '@services/erpService';
 import { useResponsive, getCardWidth } from '@hooks/useResponsive';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -24,6 +26,15 @@ import { navMinRank } from '@constants';
 import type { Warehouse } from '@apptypes/erp';
 
 const DEBOUNCE_MS = 300;
+const DEFAULT_SORT_BY = 'name';
+const DEFAULT_SORT_ORDER: SortOrder = 'asc';
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: 'Name', value: 'name' },
+  { label: 'Code', value: 'code' },
+  { label: 'City', value: 'city' },
+  { label: 'Capacity', value: 'capacity' },
+];
 
 export default function WarehousesScreen() {
   const { colors } = useThemeStore();
@@ -32,6 +43,8 @@ export default function WarehousesScreen() {
 
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sortBy, setSortBy] = useState(DEFAULT_SORT_BY);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(DEFAULT_SORT_ORDER);
   const [refreshing, setRefreshing] = useState(false);
 
   React.useEffect(() => {
@@ -39,7 +52,7 @@ export default function WarehousesScreen() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  const warehousesQuery = useWarehouses();
+  const warehousesQuery = useWarehouses(sortBy, sortOrder);
 
   const filteredWarehouses = useMemo(() => {
     const all = warehousesQuery.data ?? [];
@@ -99,6 +112,23 @@ export default function WarehousesScreen() {
         <View style={[styles.content, { paddingHorizontal: layout.padding, maxWidth: layout.contentMaxWidth, alignSelf: layout.isTablet ? 'center' : 'stretch' }]}>
           <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Search warehouses…" />
 
+          <SortControl
+            options={SORT_OPTIONS}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
+          />
+
+          <ClearFiltersButton
+            visible={debouncedSearch.trim() !== '' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+            onClear={() => {
+              setSearchText('');
+              setDebouncedSearch('');
+              setSortBy(DEFAULT_SORT_BY);
+              setSortOrder(DEFAULT_SORT_ORDER);
+            }}
+          />
+
           {showLoading && (
             <View style={styles.centerState}>
               <ActivityIndicator size="large" color={colors.gold} />
@@ -133,7 +163,7 @@ export default function WarehousesScreen() {
                   <EmptyState
                     icon="warehouses"
                     title="No Warehouses Found"
-                    message={debouncedSearch ? `No warehouses match "${debouncedSearch}".` : 'No warehouses have been set up yet.'}
+                    message={debouncedSearch.trim() !== '' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER ? 'No results match your filters. Try clearing them.' : 'No warehouses have been set up yet.'}
                   />
                 </View>
               }

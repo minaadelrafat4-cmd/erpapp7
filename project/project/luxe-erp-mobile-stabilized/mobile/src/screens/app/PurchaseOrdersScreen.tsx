@@ -16,8 +16,10 @@ import { RoleGate } from '@components/RoleGate';
 import { SearchBar } from '@components/SearchBar';
 import { FilterChips } from '@components/FilterChips';
 import { StatusBadge } from '@components/StatusBadge';
+import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
 import { useThemeStore } from '@store/themeStore';
 import { usePurchaseOrders } from '@hooks/useERP';
+import type { SortOrder } from '@services/erpService';
 import { useResponsive, getCardWidth } from '@hooks/useResponsive';
 import { useRouter } from 'expo-router';
 import { formatDate } from '@lib/format';
@@ -26,6 +28,15 @@ import type { PurchaseOrderListItem } from '@apptypes/erp';
 
 const DEBOUNCE_MS = 300;
 const STATUS_OPTIONS = ['all', 'draft', 'submitted', 'approved', 'ordered', 'partial', 'received', 'cancelled'];
+const DEFAULT_SORT_BY = 'created_at';
+const DEFAULT_SORT_ORDER: SortOrder = 'desc';
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: 'PO Number', value: 'po_number' },
+  { label: 'Status', value: 'status' },
+  { label: 'Total', value: 'grand_total' },
+  { label: 'Created', value: 'created_at' },
+];
 
 export default function PurchaseOrdersScreen() {
   const { colors } = useThemeStore();
@@ -35,6 +46,8 @@ export default function PurchaseOrdersScreen() {
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState(DEFAULT_SORT_BY);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(DEFAULT_SORT_ORDER);
   const [refreshing, setRefreshing] = useState(false);
 
   React.useEffect(() => {
@@ -42,7 +55,7 @@ export default function PurchaseOrdersScreen() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  const ordersQuery = usePurchaseOrders(debouncedSearch, statusFilter);
+  const ordersQuery = usePurchaseOrders(debouncedSearch, statusFilter, sortBy, sortOrder);
 
   const allOrders = useMemo(() => {
     return ordersQuery.data?.pages.flatMap((page) => page.items) ?? [];
@@ -106,6 +119,24 @@ export default function PurchaseOrdersScreen() {
             onSelect={setStatusFilter}
           />
 
+          <SortControl
+            options={SORT_OPTIONS}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
+          />
+
+          <ClearFiltersButton
+            visible={debouncedSearch.trim() !== '' || statusFilter !== 'all' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+            onClear={() => {
+              setSearchText('');
+              setDebouncedSearch('');
+              setStatusFilter('all');
+              setSortBy(DEFAULT_SORT_BY);
+              setSortOrder(DEFAULT_SORT_ORDER);
+            }}
+          />
+
           {showLoading && (
             <View style={styles.centerState}>
               <ActivityIndicator size="large" color={colors.gold} />
@@ -142,7 +173,7 @@ export default function PurchaseOrdersScreen() {
                   <EmptyState
                     icon="purchase-orders"
                     title="No Purchase Orders"
-                    message={debouncedSearch || statusFilter !== 'all' ? 'No purchase orders match your filters.' : 'No purchase orders have been created yet.'}
+                    message={debouncedSearch.trim() !== '' || statusFilter !== 'all' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER ? 'No results match your filters. Try clearing them.' : 'No purchase orders have been created yet.'}
                   />
                 </View>
               }

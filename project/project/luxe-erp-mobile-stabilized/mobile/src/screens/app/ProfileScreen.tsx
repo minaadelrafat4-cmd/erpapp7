@@ -29,7 +29,9 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getIconName } from '@config/icons';
 import { InfoRow } from '@components/InfoRow';
+import { CardSection } from '@components/SectionHeader';
 import { formatDateTime } from '@lib/format';
+import { useChangePassword } from '@hooks/useERP';
 
 export default function ProfileScreen() {
   const { colors } = useThemeStore();
@@ -47,6 +49,12 @@ export default function ProfileScreen() {
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const changePasswordFn = useChangePassword();
 
   const startEditing = useCallback(() => {
     setFullName(profileQuery.data?.full_name ?? '');
@@ -108,6 +116,30 @@ export default function ProfileScreen() {
       { text: 'Sign Out', style: 'destructive', onPress: () => signOut() },
     ]);
   }, [signOut]);
+
+  const handleChangePassword = useCallback(async () => {
+    if (newPassword.length < 8) {
+      Alert.alert('Weak Password', 'New password must be at least 8 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Password Mismatch', 'New password and confirmation do not match.');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await changePasswordFn(currentPassword, newPassword);
+      Alert.alert('Success', 'Your password has been changed successfully.');
+      setShowPasswordForm(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to change password.');
+    } finally {
+      setChangingPassword(false);
+    }
+  }, [currentPassword, newPassword, confirmPassword, changePasswordFn]);
 
   if (profileQuery.isLoading) {
     return (
@@ -237,6 +269,72 @@ export default function ProfileScreen() {
         </Card>
 
         {/* Sign Out */}
+
+        {/* Change Password */}
+        <Card>
+          <CardSection title="Security">
+            {!showPasswordForm ? (
+              <TouchableOpacity
+                style={[styles.changePwdRow, { borderColor: colors.border }]}
+                onPress={() => setShowPasswordForm(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.changePwdLeft}>
+                  <MaterialCommunityIcons name={getIconName('lock')} size={18} color={colors.gold} />
+                  <Text style={[styles.changePwdText, { color: colors.textPrimary }]}>Change Password</Text>
+                </View>
+                <MaterialCommunityIcons name={getIconName('chevron-right')} size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.passwordForm}>
+                <Input
+                  label="Current Password"
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  placeholder="Enter current password"
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+                <Input
+                  label="New Password"
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="At least 8 characters"
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+                <Input
+                  label="Confirm New Password"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Re-enter new password"
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+                <View style={styles.editActions}>
+                  <Button title="Cancel" onPress={() => { setShowPasswordForm(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }} variant="outline" size="md" style={styles.editBtn} />
+                  <Button title={changingPassword ? 'Changing…' : 'Change'} onPress={handleChangePassword} variant="primary" size="md" loading={changingPassword} disabled={changingPassword} style={styles.editBtn} />
+                </View>
+              </View>
+            )}
+          </CardSection>
+        </Card>
+
+        {/* Session Information */}
+        <Card>
+          <CardSection title="Session Information">
+            <View style={styles.infoContainer}>
+              <InfoRow label="Account Created" value={formatDateTime(data.created_at)} icon="calendar" />
+              <InfoRow label="Last Updated" value={formatDateTime(data.updated_at)} icon="clock" />
+              <InfoRow label="Account ID" value={data.id.substring(0, 8) + '…'} icon="shield" />
+              <InfoRow label="Login Attempts" value={String(data.failed_login_attempts)} icon="alert" />
+              {data.locked_until && (
+                <InfoRow label="Locked Until" value={formatDateTime(data.locked_until)} icon="lock" valueColor={colors.error} />
+              )}
+            </View>
+          </CardSection>
+        </Card>
+
         <Button
           title="Sign Out"
           onPress={handleSignOut}
@@ -281,4 +379,8 @@ const styles = StyleSheet.create({
   editActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
   editBtn: { flex: 1 },
   signOutBtn: { marginTop: 8 },
+  changePwdRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderWidth: 1, borderRadius: 10, paddingHorizontal: 14 },
+  changePwdLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  changePwdText: { fontSize: 14, fontWeight: '600' },
+  passwordForm: { gap: 8 },
 });

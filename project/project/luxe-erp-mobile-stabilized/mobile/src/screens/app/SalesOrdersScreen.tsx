@@ -16,8 +16,10 @@ import { RoleGate } from '@components/RoleGate';
 import { SearchBar } from '@components/SearchBar';
 import { FilterChips } from '@components/FilterChips';
 import { StatusBadge } from '@components/StatusBadge';
+import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
 import { useThemeStore } from '@store/themeStore';
 import { useSalesOrders } from '@hooks/useERP';
+import type { SortOrder } from '@services/erpService';
 import { useResponsive, getCardWidth } from '@hooks/useResponsive';
 import { useRouter } from 'expo-router';
 import { formatDate } from '@lib/format';
@@ -26,6 +28,15 @@ import type { SalesOrderListItem } from '@apptypes/erp';
 
 const DEBOUNCE_MS = 300;
 const STATUS_OPTIONS = ['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+const DEFAULT_SORT_BY = 'placed_at';
+const DEFAULT_SORT_ORDER: SortOrder = 'desc';
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: 'Order #', value: 'order_number' },
+  { label: 'Status', value: 'status' },
+  { label: 'Total', value: 'grand_total' },
+  { label: 'Date', value: 'placed_at' },
+];
 
 export default function SalesOrdersScreen() {
   const { colors } = useThemeStore();
@@ -35,6 +46,8 @@ export default function SalesOrdersScreen() {
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState(DEFAULT_SORT_BY);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(DEFAULT_SORT_ORDER);
   const [refreshing, setRefreshing] = useState(false);
 
   React.useEffect(() => {
@@ -42,7 +55,7 @@ export default function SalesOrdersScreen() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  const ordersQuery = useSalesOrders(debouncedSearch, statusFilter);
+  const ordersQuery = useSalesOrders(debouncedSearch, statusFilter, sortBy, sortOrder);
 
   const allOrders = useMemo(() => {
     return ordersQuery.data?.pages.flatMap((page) => page.items) ?? [];
@@ -111,6 +124,24 @@ export default function SalesOrdersScreen() {
             onSelect={setStatusFilter}
           />
 
+          <SortControl
+            options={SORT_OPTIONS}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
+          />
+
+          <ClearFiltersButton
+            visible={debouncedSearch.trim() !== '' || statusFilter !== 'all' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+            onClear={() => {
+              setSearchText('');
+              setDebouncedSearch('');
+              setStatusFilter('all');
+              setSortBy(DEFAULT_SORT_BY);
+              setSortOrder(DEFAULT_SORT_ORDER);
+            }}
+          />
+
           {showLoading && (
             <View style={styles.centerState}>
               <ActivityIndicator size="large" color={colors.gold} />
@@ -147,7 +178,7 @@ export default function SalesOrdersScreen() {
                   <EmptyState
                     icon="sales-orders"
                     title="No Sales Orders"
-                    message={debouncedSearch || statusFilter !== 'all' ? 'No sales orders match your filters.' : 'No sales orders have been placed yet.'}
+                    message={debouncedSearch.trim() !== '' || statusFilter !== 'all' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER ? 'No results match your filters. Try clearing them.' : 'No sales orders have been placed yet.'}
                   />
                 </View>
               }

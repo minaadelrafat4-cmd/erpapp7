@@ -1,0 +1,9 @@
+ALTER VIEW v_dashboard_summary SET (security_invoker = true);
+ALTER VIEW v_customer_summary SET (security_invoker = true);
+ALTER VIEW v_order_summary SET (security_invoker = true);
+ALTER VIEW v_bi_sales_daily SET (security_invoker = true);
+ALTER VIEW v_bi_inventory_value SET (security_invoker = true);
+ALTER VIEW v_bi_low_stock SET (security_invoker = true);
+ALTER VIEW v_bi_branch_sales SET (security_invoker = true);
+ALTER VIEW v_bi_product_sales SET (security_invoker = true);
+ALTER VIEW v_bi_employee_performance SET (security_invoker = true);

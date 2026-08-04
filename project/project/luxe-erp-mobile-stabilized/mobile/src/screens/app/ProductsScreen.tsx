@@ -15,8 +15,10 @@ import { Card } from '@components/Card';
 import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
+import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
 import { useThemeStore } from '@store/themeStore';
 import { useProducts, useCategories } from '@hooks/useERP';
+import type { SortOrder } from '@services/erpService';
 import { useResponsive, getCardWidth } from '@hooks/useResponsive';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -24,6 +26,15 @@ import { getIconName } from '@config/icons';
 import type { ProductListItem } from '@hooks/useERP';
 
 const DEBOUNCE_MS = 300;
+const DEFAULT_SORT_BY = 'created_at';
+const DEFAULT_SORT_ORDER: SortOrder = 'desc';
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: 'Name', value: 'name' },
+  { label: 'Price', value: 'price' },
+  { label: 'Stock', value: 'stock' },
+  { label: 'Newest', value: 'created_at' },
+];
 
 export default function ProductsScreen() {
   const { colors } = useThemeStore();
@@ -33,6 +44,8 @@ export default function ProductsScreen() {
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState(DEFAULT_SORT_BY);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(DEFAULT_SORT_ORDER);
   const [refreshing, setRefreshing] = useState(false);
 
   // Debounce search input
@@ -41,7 +54,7 @@ export default function ProductsScreen() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  const productsQuery = useProducts(debouncedSearch, selectedCategory);
+  const productsQuery = useProducts(debouncedSearch, selectedCategory, sortBy, sortOrder);
   const categoriesQuery = useCategories();
 
   const allProducts = useMemo(() => {
@@ -151,6 +164,24 @@ export default function ProductsScreen() {
           />
         )}
 
+        <SortControl
+          options={SORT_OPTIONS}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
+        />
+
+        <ClearFiltersButton
+          visible={debouncedSearch.trim() !== '' || selectedCategory !== null || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+          onClear={() => {
+            setSearchText('');
+            setDebouncedSearch('');
+            setSelectedCategory(null);
+            setSortBy(DEFAULT_SORT_BY);
+            setSortOrder(DEFAULT_SORT_ORDER);
+          }}
+        />
+
         {/* Product List */}
         {showLoading && (
           <View style={styles.centerState}>
@@ -188,7 +219,7 @@ export default function ProductsScreen() {
                 <EmptyState
                   icon="package"
                   title="No Products Found"
-                  message={debouncedSearch ? `No products match "${debouncedSearch}".` : 'No products in the catalog yet.'}
+                  message={debouncedSearch.trim() !== '' || selectedCategory !== null || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER ? 'No results match your filters. Try clearing them.' : 'No products in the catalog yet.'}
                 />
               </View>
             }

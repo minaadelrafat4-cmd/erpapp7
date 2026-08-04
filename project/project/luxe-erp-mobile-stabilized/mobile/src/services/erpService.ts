@@ -145,8 +145,12 @@ export async function fetchProducts(opts: {
   categoryId?: string;
   cursor?: string | null;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }): Promise<ProductListResult> {
   const limit = opts.limit ?? APP_CONFIG.itemsPerPage;
+  const sortBy = opts.sortBy ?? 'created_at';
+  const sortOrder = opts.sortOrder ?? 'desc';
   let query = supabase.from('products').select(PRODUCT_SELECT, { count: 'exact' }).eq('is_active', true);
 
   if (opts.search) {
@@ -159,7 +163,7 @@ export async function fetchProducts(opts: {
     query = query.lt('created_at', opts.cursor);
   }
 
-  query = query.order('created_at', { ascending: false }).limit(limit + 1);
+  query = query.order(sortBy, { ascending: sortOrder === 'asc' }).limit(limit + 1);
 
   const { data, error } = await query;
   if (error) throw toApiError(error);
@@ -229,11 +233,13 @@ export async function fetchCategories(): Promise<Category[]> {
   return (data ?? []) as Category[];
 }
 
-export async function fetchCategoriesWithCounts(): Promise<CategoryWithCount[]> {
+export async function fetchCategoriesWithCounts(opts?: { sortBy?: string; sortOrder?: SortOrder }): Promise<CategoryWithCount[]> {
+  const sortBy = opts?.sortBy ?? 'sort_order';
+  const sortOrder = opts?.sortOrder ?? 'asc';
   const { data: categories, error: catError } = await supabase
     .from('categories')
     .select('*')
-    .order('sort_order', { ascending: true });
+    .order(sortBy, { ascending: sortOrder === 'asc' });
 
   if (catError) throw toApiError(catError);
 
@@ -260,23 +266,27 @@ export async function fetchCategoriesWithCounts(): Promise<CategoryWithCount[]> 
 // Branches & Warehouses Service
 // ============================================================
 
-export async function fetchBranches(): Promise<Branch[]> {
+export async function fetchBranches(opts?: { sortBy?: string; sortOrder?: SortOrder }): Promise<Branch[]> {
+  const sortBy = opts?.sortBy ?? 'name';
+  const sortOrder = opts?.sortOrder ?? 'asc';
   const { data, error } = await supabase
     .from('branches')
     .select('*')
     .eq('is_active', true)
-    .order('name', { ascending: true });
+    .order(sortBy, { ascending: sortOrder === 'asc' });
 
   if (error) throw toApiError(error);
   return (data ?? []) as Branch[];
 }
 
-export async function fetchWarehouses(): Promise<Warehouse[]> {
+export async function fetchWarehouses(opts?: { sortBy?: string; sortOrder?: SortOrder }): Promise<Warehouse[]> {
+  const sortBy = opts?.sortBy ?? 'name';
+  const sortOrder = opts?.sortOrder ?? 'asc';
   const { data, error } = await supabase
     .from('warehouses')
     .select('*')
     .eq('is_active', true)
-    .order('name', { ascending: true });
+    .order(sortBy, { ascending: sortOrder === 'asc' });
 
   if (error) throw toApiError(error);
   return (data ?? []) as Warehouse[];
@@ -321,13 +331,17 @@ export interface InventoryFilter {
   branchId?: string;
   warehouseId?: string;
   categoryId?: string;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }
 
 export async function fetchInventory(opts: InventoryFilter = {}): Promise<InventoryItemWithStatus[]> {
+  const sortBy = opts.sortBy ?? 'updated_at';
+  const sortOrder = opts.sortOrder ?? 'desc';
   let query = supabase
     .from('inventory')
     .select(INVENTORY_SELECT)
-    .order('updated_at', { ascending: false })
+    .order(sortBy, { ascending: sortOrder === 'asc' })
     .limit(200);
 
   if (opts.branchId) query = query.eq('branch_id', opts.branchId);
@@ -608,6 +622,12 @@ export async function uploadProfileAvatar(userId: string, fileUri: string, mimeT
 }
 
 // ============================================================
+// Sort Type (shared)
+// ============================================================
+
+export type SortOrder = 'asc' | 'desc';
+
+// ============================================================
 // Customer Service
 // ============================================================
 
@@ -615,10 +635,14 @@ export interface CustomerListParams {
   search?: string;
   cursor?: string | null;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }
 
 export async function fetchCustomers(opts: CustomerListParams = {}): Promise<CustomerListResult> {
   const limit = opts.limit ?? APP_CONFIG.itemsPerPage;
+  const sortBy = opts.sortBy ?? 'created_at';
+  const sortOrder = opts.sortOrder ?? 'desc';
   let query = supabase
     .from('v_customer_summary')
     .select('id, user_id, first_name, last_name, email, loyalty_points, created_at, order_count, total_spent, last_order_at');
@@ -632,7 +656,7 @@ export async function fetchCustomers(opts: CustomerListParams = {}): Promise<Cus
     query = query.lt('created_at', opts.cursor);
   }
 
-  query = query.order('created_at', { ascending: false }).limit(limit + 1);
+  query = query.order(sortBy, { ascending: sortOrder === 'asc' }).limit(limit + 1);
 
   const { data, error } = await query;
   if (error) throw toApiError(error);
@@ -721,10 +745,14 @@ export interface SupplierListParams {
   search?: string;
   cursor?: string | null;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }
 
 export async function fetchSuppliers(opts: SupplierListParams = {}): Promise<SupplierListResult> {
   const limit = opts.limit ?? APP_CONFIG.itemsPerPage;
+  const sortBy = opts.sortBy ?? 'created_at';
+  const sortOrder = opts.sortOrder ?? 'desc';
   let query = supabase
     .from('suppliers')
     .select('id, name, contact_name, email, phone, address, city, country, payment_terms, is_active, created_at, updated_at');
@@ -738,7 +766,7 @@ export async function fetchSuppliers(opts: SupplierListParams = {}): Promise<Sup
     query = query.lt('created_at', opts.cursor);
   }
 
-  query = query.order('created_at', { ascending: false }).limit(limit + 1);
+  query = query.order(sortBy, { ascending: sortOrder === 'asc' }).limit(limit + 1);
 
   const { data, error } = await query;
   if (error) throw toApiError(error);
@@ -800,14 +828,16 @@ export interface PurchaseOrderListParams {
   status?: string;
   cursor?: string | null;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }
 
 export async function fetchPurchaseOrders(params: PurchaseOrderListParams): Promise<PurchaseOrderListResult> {
-  const { search, status, cursor, limit = 20 } = params;
+  const { search, status, cursor, limit = 20, sortBy = 'created_at', sortOrder = 'desc' } = params;
   let query = supabase
     .from('purchase_orders')
     .select('id, po_number, supplier_id, supplier:suppliers(name), warehouse_id, warehouse:warehouses(name), status, grand_total, currency, expected_at, received_at, created_at')
-    .order('created_at', { ascending: false })
+    .order(sortBy, { ascending: sortOrder === 'asc' })
     .limit(limit + 1);
 
   if (status && status !== 'all') {
@@ -947,14 +977,16 @@ export interface SalesOrderListParams {
   status?: string;
   cursor?: string | null;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }
 
 export async function fetchSalesOrders(params: SalesOrderListParams): Promise<SalesOrderListResult> {
-  const { search, status, cursor, limit = 20 } = params;
+  const { search, status, cursor, limit = 20, sortBy = 'placed_at', sortOrder = 'desc' } = params;
   let query = supabase
     .from('orders')
     .select('id, order_number, customer_id, customer:customers(first_name,last_name), status, payment_status, fulfillment_status, grand_total, currency, placed_at, created_at')
-    .order('placed_at', { ascending: false })
+    .order(sortBy, { ascending: sortOrder === 'asc' })
     .limit(limit + 1);
 
   if (status && status !== 'all') {
@@ -1106,14 +1138,16 @@ export interface EmployeeListParams {
   search?: string;
   cursor?: string | null;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }
 
 export async function fetchEmployees(params: EmployeeListParams = {}): Promise<EmployeeListResult> {
-  const { search, cursor, limit = APP_CONFIG.itemsPerPage } = params;
+  const { search, cursor, limit = APP_CONFIG.itemsPerPage, sortBy = 'created_at', sortOrder = 'desc' } = params;
   let query = supabase
     .from('employees')
     .select('id, first_name, last_name, email, phone, position, status, hire_date, branch_id, branch:branches(name), created_at, updated_at')
-    .order('created_at', { ascending: false })
+    .order(sortBy, { ascending: sortOrder === 'asc' })
     .limit(limit + 1);
 
   if (cursor) query = query.lt('created_at', cursor);
@@ -1272,14 +1306,16 @@ export interface ReportListParams {
   search?: string;
   cursor?: string | null;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }
 
 export async function fetchReports(params: ReportListParams = {}): Promise<ReportListResult> {
-  const { search, cursor, limit = APP_CONFIG.itemsPerPage } = params;
+  const { search, cursor, limit = APP_CONFIG.itemsPerPage, sortBy = 'created_at', sortOrder = 'desc' } = params;
   let query = supabase
     .from('reports')
     .select('id, name, description, type, is_scheduled, schedule_cron, last_run_at, created_at, updated_at')
-    .order('created_at', { ascending: false })
+    .order(sortBy, { ascending: sortOrder === 'asc' })
     .limit(limit + 1);
 
   if (cursor) query = query.lt('created_at', cursor);
@@ -1362,6 +1398,8 @@ export interface ReceivingListParams {
   status?: string;
   cursor?: string | null;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }
 
 const RECEIVING_STATUSES = ['ordered', 'partial', 'received'];
@@ -1375,12 +1413,12 @@ function computeReceivingStatus(poStatus: string, totalQty: number, receivedQty:
 }
 
 export async function fetchReceivingList(params: ReceivingListParams): Promise<ReceivingListResult> {
-  const { search, status, cursor, limit = APP_CONFIG.itemsPerPage } = params;
+  const { search, status, cursor, limit = APP_CONFIG.itemsPerPage, sortBy = 'created_at', sortOrder = 'desc' } = params;
   let query = supabase
     .from('purchase_orders')
     .select('id, po_number, supplier:suppliers(name), warehouse_id, warehouse:warehouses(name), status, expected_at, received_at, created_at')
     .in('status', RECEIVING_STATUSES)
-    .order('created_at', { ascending: false })
+    .order(sortBy, { ascending: sortOrder === 'asc' })
     .limit(limit + 1);
 
   if (status && status !== 'all') {
@@ -1567,14 +1605,16 @@ export interface TaskListParams {
   priority?: string;
   cursor?: string | null;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }
 
 export async function fetchTasks(params: TaskListParams = {}): Promise<TaskListResult> {
-  const { search, status, priority, cursor, limit = APP_CONFIG.itemsPerPage } = params;
+  const { search, status, priority, cursor, limit = APP_CONFIG.itemsPerPage, sortBy = 'created_at', sortOrder = 'desc' } = params;
   let query = supabase
     .from('tasks')
     .select('id, title, description, status, priority, due_date, assigned_to, created_at, updated_at')
-    .order('created_at', { ascending: false })
+    .order(sortBy, { ascending: sortOrder === 'asc' })
     .limit(limit + 1);
 
   if (status && status !== 'all') {
@@ -1717,14 +1757,16 @@ export interface StockTransferListParams {
   status?: string;
   cursor?: string | null;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: SortOrder;
 }
 
 export async function fetchStockTransfers(params: StockTransferListParams = {}): Promise<StockTransferListResult> {
-  const { search, status, cursor, limit = APP_CONFIG.itemsPerPage } = params;
+  const { search, status, cursor, limit = APP_CONFIG.itemsPerPage, sortBy = 'created_at', sortOrder = 'desc' } = params;
   let query = supabase
     .from('stock_transfers')
     .select('id, transfer_number, status, source_type, source_id, destination_type, destination_id, notes, created_by, created_at, updated_at')
-    .order('created_at', { ascending: false })
+    .order(sortBy, { ascending: sortOrder === 'asc' })
     .limit(limit + 1);
 
   if (status && status !== 'all') {
@@ -1995,4 +2037,76 @@ export async function createPOSOrder(params: POSCheckoutParams): Promise<{ order
   }
 
   return { orderId: order.id, orderNumber: order.order_number };
+}
+
+// ============================================================
+// User Settings Service
+// ============================================================
+
+export interface UserSettings {
+  id: string;
+  theme: string;
+  language: string;
+  push_notifications: boolean;
+  email_notifications: boolean;
+  low_stock_alerts: boolean;
+  order_alerts: boolean;
+  task_reminders: boolean;
+  transfer_alerts: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchUserSettings(userId: string): Promise<UserSettings> {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) throw toApiError(error);
+  if (!data) {
+    const { data: created, error: createError } = await supabase
+      .from('user_settings')
+      .insert({ id: userId })
+      .select('*')
+      .single();
+    if (createError) throw toApiError(createError);
+    return created as UserSettings;
+  }
+  return data as UserSettings;
+}
+
+export async function updateUserSettings(
+  userId: string,
+  updates: Partial<Omit<UserSettings, 'id' | 'created_at' | 'updated_at'>>
+): Promise<UserSettings> {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .select('*')
+    .single();
+
+  if (error) throw toApiError(error);
+  return data as UserSettings;
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.email) throw new ApiError('Not signed in.', '401', 401);
+
+  const { error: reauthError } = await supabase.auth.signInWithPassword({
+    email: session.user.email,
+    password: currentPassword,
+  });
+  if (reauthError) throw new ApiError('Current password is incorrect.', 'AUTH_INVALID', 401);
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+  if (updateError) throw new ApiError(updateError.message, 'AUTH_UPDATE', 400);
 }
