@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "LUXE ERP",
+    "slug": "luxe-erp-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "luxe-erp",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0c0f13"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.luxe.erp",
+      "infoPlist": {
+        "NSCameraUsageDescription": "LUXE ERP uses the camera to scan product barcodes and QR codes.",
+        "NSLocationWhenInUseUsageDescription": "LUXE ERP uses your location to find nearby branches and warehouses."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0c0f13"
+      },
+      "package": "com.luxe.erp"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermissionText": "LUXE ERP needs camera access to scan barcodes and QR codes."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "LUXE ERP uses your location to find nearby branches."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#c08f2e"
+        }
+      ]
+    ],
+    "experiments": {
+      "tsconfigPaths": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "luxe-erp-mobile"
+      },
+      "supabaseUrl": "https://txnzjussvgxdcrebpsro.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4bnpqdXNzdmd4ZGNyZWJwc3JvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4Mjc5MjksImV4cCI6MjEwMTQwMzkyOX0.HFiIpHIqJtqoMSfIZvMFnSnf2ORJYY-YSK7JDI-FDo4"
+    }
+  }
+}
