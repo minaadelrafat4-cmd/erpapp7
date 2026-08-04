@@ -17,7 +17,8 @@ import { DetailHeader } from '@components/DetailHeader';
 import { CardSection } from '@components/SectionHeader';
 import { SummaryGrid } from '@components/SummaryGrid';
 import { useThemeStore } from '@store/themeStore';
-import { useEmployeeDetail } from '@hooks/useERP';
+import { useEmployeeDetail, useAttachments } from '@hooks/useERP';
+import { AttachmentManager } from '@components/AttachmentManager';
 import { useResponsive } from '@hooks/useResponsive';
 import { useLocalSearchParams } from 'expo-router';
 import { formatCurrency, formatDate } from '@lib/format';
@@ -70,6 +71,11 @@ export default function EmployeeDetailScreen() {
 
   const emp = employeeQuery.data;
   const fullName = `${emp.first_name} ${emp.last_name}`;
+
+  const attachmentsQuery = useAttachments('employee', emp.id);
+  const onRefreshAttachments = React.useCallback(() => {
+    attachmentsQuery.refetch();
+  }, [attachmentsQuery]);
   const initials = `${emp.first_name.charAt(0)}${emp.last_name.charAt(0)}`.toUpperCase();
 
   const getStatusColor = (status: string): string => {
@@ -170,6 +176,17 @@ export default function EmployeeDetailScreen() {
               </CardSection>
             </Card>
           )}
+
+          <Card>
+            <CardSection title="Attachments">
+              <AttachmentManager
+                entityType="employee"
+                entityId={emp.id}
+                attachments={attachmentsQuery.data ?? []}
+                onRefresh={onRefreshAttachments}
+              />
+            </CardSection>
+          </Card>
         </ScrollView>
       </ScreenWrapper>
     </RoleGate>

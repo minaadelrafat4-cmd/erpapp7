@@ -90,6 +90,13 @@ const ICON_MAP: Record<IconName, ComponentProps<typeof MaterialCommunityIcons>['
   'flag': 'flag-outline',
   'account': 'account-circle-outline',
   'email': 'email-outline',
+  'history': 'history',
+  'paperclip': 'paperclip',
+  'file-export': 'file-export-outline',
+  'file-pdf': 'file-pdf-box',
+  'file-excel': 'file-excel-box',
+  'file-csv': 'file-delimited-outline',
+  'shield-check': 'shield-check-outline',
 };
 
 export function getIconName(name: IconName): ComponentProps<typeof MaterialCommunityIcons>['name'] {

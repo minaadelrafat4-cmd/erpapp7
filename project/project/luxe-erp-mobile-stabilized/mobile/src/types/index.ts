@@ -166,7 +166,8 @@ export type IconName =
   | 'eye' | 'eye-off' | 'lock' | 'unlock' | 'edit' | 'trash'
   | 'archive' | 'folder' | 'file' | 'image' | 'star' | 'heart'
   | 'info' | 'external-link' | 'receiving' | 'scan'
-  | 'map' | 'flag' | 'account' | 'email';
+  | 'map' | 'flag' | 'account' | 'email'
+  | 'history' | 'paperclip' | 'file-export' | 'file-pdf' | 'file-excel' | 'file-csv' | 'shield-check';
 
 export interface NavItemConfig {
   key: string;

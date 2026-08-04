@@ -17,6 +17,7 @@ import { SearchBar } from '@components/SearchBar';
 import { FilterChips } from '@components/FilterChips';
 import { StatusBadge } from '@components/StatusBadge';
 import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
+import { ExportButton } from '@components/ExportButton';
 import { useThemeStore } from '@store/themeStore';
 import { usePurchaseOrders } from '@hooks/useERP';
 import type { SortOrder } from '@services/erpService';
@@ -126,16 +127,31 @@ export default function PurchaseOrdersScreen() {
             onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
           />
 
-          <ClearFiltersButton
-            visible={debouncedSearch.trim() !== '' || statusFilter !== 'all' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
-            onClear={() => {
-              setSearchText('');
-              setDebouncedSearch('');
-              setStatusFilter('all');
-              setSortBy(DEFAULT_SORT_BY);
-              setSortOrder(DEFAULT_SORT_ORDER);
-            }}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <ClearFiltersButton
+              visible={debouncedSearch.trim() !== '' || statusFilter !== 'all' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+              onClear={() => {
+                setSearchText('');
+                setDebouncedSearch('');
+                setStatusFilter('all');
+                setSortBy(DEFAULT_SORT_BY);
+                setSortOrder(DEFAULT_SORT_ORDER);
+              }}
+            />
+            <View style={{ flex: 1 }} />
+            <ExportButton
+              filename="purchase_orders"
+              columns={[
+                { header: 'PO Number', accessor: (r: PurchaseOrderListItem) => r.po_number },
+                { header: 'Status', accessor: (r: PurchaseOrderListItem) => r.status },
+                { header: 'Total', accessor: (r: PurchaseOrderListItem) => r.grand_total },
+                { header: 'Currency', accessor: (r: PurchaseOrderListItem) => r.currency },
+                { header: 'Created', accessor: (r: PurchaseOrderListItem) => r.created_at },
+              ]}
+              data={allOrders}
+              disabled={allOrders.length === 0}
+            />
+          </View>
 
           {showLoading && (
             <View style={styles.centerState}>

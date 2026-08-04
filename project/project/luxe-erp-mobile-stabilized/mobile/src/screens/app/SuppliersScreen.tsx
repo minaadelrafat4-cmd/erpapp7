@@ -15,6 +15,7 @@ import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
 import { RoleGate } from '@components/RoleGate';
+import { ExportButton } from '@components/ExportButton';
 import { useThemeStore } from '@store/themeStore';
 import { useSuppliers } from '@hooks/useERP';
 import type { SortOrder } from '@services/erpService';
@@ -124,15 +125,31 @@ export default function SuppliersScreen() {
             onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
           />
 
-          <ClearFiltersButton
-            visible={debouncedSearch.trim() !== '' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
-            onClear={() => {
-              setSearchText('');
-              setDebouncedSearch('');
-              setSortBy(DEFAULT_SORT_BY);
-              setSortOrder(DEFAULT_SORT_ORDER);
-            }}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <ClearFiltersButton
+              visible={debouncedSearch.trim() !== '' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+              onClear={() => {
+                setSearchText('');
+                setDebouncedSearch('');
+                setSortBy(DEFAULT_SORT_BY);
+                setSortOrder(DEFAULT_SORT_ORDER);
+              }}
+            />
+            <View style={{ flex: 1 }} />
+            <ExportButton
+              filename="suppliers"
+              columns={[
+                { header: 'Name', accessor: (r: SupplierListItem) => r.name },
+                { header: 'Contact', accessor: (r: SupplierListItem) => r.contact_name ?? '' },
+                { header: 'Email', accessor: (r: SupplierListItem) => r.email ?? '' },
+                { header: 'Phone', accessor: (r: SupplierListItem) => r.phone ?? '' },
+                { header: 'City', accessor: (r: SupplierListItem) => r.city ?? '' },
+                { header: 'Active', accessor: (r: SupplierListItem) => r.is_active ? 'Yes' : 'No' },
+              ]}
+              data={allSuppliers}
+              disabled={allSuppliers.length === 0}
+            />
+          </View>
 
           {showLoading && (
             <View style={styles.centerState}>

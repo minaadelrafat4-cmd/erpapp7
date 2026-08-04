@@ -63,6 +63,8 @@ import type {
   StockTransferDetail,
   StockTransferItem,
   StockTransferStatus,
+  AuditLog,
+  FileAttachment,
 } from '@apptypes/erp';
 import { APP_CONFIG } from '@constants';
 import type { Profile } from '@apptypes';
@@ -2109,4 +2111,104 @@ export async function changePassword(
     password: newPassword,
   });
   if (updateError) throw new ApiError(updateError.message, 'AUTH_UPDATE', 400);
+}
+
+// ============================================================
+// Audit Log Service
+// ============================================================
+
+export interface AuditLogListParams {
+  search?: string;
+  module?: string;
+  action?: string;
+  cursor?: string | null;
+  limit?: number;
+}
+
+export interface AuditLogListResult {
+  items: AuditLog[];
+  nextCursor: string | null;
+}
+
+export async function fetchAuditLogs(params: AuditLogListParams = {}): Promise<AuditLogListResult> {
+  const { search, module, action, cursor, limit = APP_CONFIG.itemsPerPage } = params;
+  let query = supabase
+    .from('audit_logs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit + 1);
+
+  if (search) {
+    query = query.or(`user_email.ilike.%${search}%,action.ilike.%${search}%,module.ilike.%${search}%`);
+  }
+  if (module && module !== 'all') {
+    query = query.eq('module', module);
+  }
+  if (action && action !== 'all') {
+    query = query.eq('action', action);
+  }
+  if (cursor) {
+    query = query.lt('created_at', cursor);
+  }
+
+  const { data, error } = await query;
+  if (error) throw toApiError(error);
+
+  const rows = (data ?? []) as AuditLog[];
+  const items = rows.slice(0, limit);
+  const nextCursor = rows.length > limit ? rows[limit - 1]!.created_at : null;
+
+  return { items, nextCursor };
+}
+
+export async function logAuditEntry(entry: {
+  action: string;
+  module: string;
+  entity_id?: string | null;
+  entity_type?: string | null;
+  before_values?: Record<string, unknown> | null;
+  after_values?: Record<string, unknown> | null;
+}): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData.session?.user?.id;
+  const userEmail = sessionData.session?.user?.email;
+
+  const { error } = await supabase.from('audit_logs').insert({
+    user_id: userId ?? null,
+    user_email: userEmail ?? null,
+    action: entry.action,
+    module: entry.module,
+    entity_id: entry.entity_id ?? null,
+    entity_type: entry.entity_type ?? null,
+    before_values: entry.before_values ?? null,
+    after_values: entry.after_values ?? null,
+  });
+
+  if (error) {
+    console.warn('Failed to log audit entry:', error.message);
+  }
+}
+
+// ============================================================
+// File Attachments Service
+// ============================================================
+
+export async function fetchAttachments(
+  entityType: string,
+  entityId: string,
+): Promise<FileAttachment[]> {
+  const { data, error } = await supabase
+    .from('file_attachments')
+    .select('*')
+    .eq('entity_type', entityType)
+    .eq('entity_id', entityId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw toApiError(error);
+  return (data ?? []) as FileAttachment[];
+}
+
+export async function deleteAttachment(id: string): Promise<void> {
+  const { error } = await supabase.from('file_attachments').delete().eq('id', id);
+  if (error) throw toApiError(error);
 }

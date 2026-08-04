@@ -15,6 +15,7 @@ import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
 import { RoleGate } from '@components/RoleGate';
+import { ExportButton } from '@components/ExportButton';
 import { useThemeStore } from '@store/themeStore';
 import { useCustomers } from '@hooks/useERP';
 import type { SortOrder } from '@services/erpService';
@@ -127,15 +128,31 @@ export default function CustomersScreen() {
             onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
           />
 
-          <ClearFiltersButton
-            visible={debouncedSearch.trim() !== '' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
-            onClear={() => {
-              setSearchText('');
-              setDebouncedSearch('');
-              setSortBy(DEFAULT_SORT_BY);
-              setSortOrder(DEFAULT_SORT_ORDER);
-            }}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <ClearFiltersButton
+              visible={debouncedSearch.trim() !== '' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+              onClear={() => {
+                setSearchText('');
+                setDebouncedSearch('');
+                setSortBy(DEFAULT_SORT_BY);
+                setSortOrder(DEFAULT_SORT_ORDER);
+              }}
+            />
+            <View style={{ flex: 1 }} />
+            <ExportButton
+              filename="customers"
+              columns={[
+                { header: 'First Name', accessor: (r: CustomerListItem) => r.first_name ?? '' },
+                { header: 'Last Name', accessor: (r: CustomerListItem) => r.last_name ?? '' },
+                { header: 'Email', accessor: (r: CustomerListItem) => r.email ?? '' },
+                { header: 'Orders', accessor: (r: CustomerListItem) => r.order_count ?? 0 },
+                { header: 'Total Spent', accessor: (r: CustomerListItem) => r.total_spent ?? 0 },
+                { header: 'Loyalty Points', accessor: (r: CustomerListItem) => r.loyalty_points ?? 0 },
+              ]}
+              data={allCustomers}
+              disabled={allCustomers.length === 0}
+            />
+          </View>
 
           {showLoading && (
             <View style={styles.centerState}>

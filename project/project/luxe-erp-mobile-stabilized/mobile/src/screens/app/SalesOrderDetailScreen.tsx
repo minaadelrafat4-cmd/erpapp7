@@ -17,7 +17,8 @@ import { StatusBadge } from '@components/StatusBadge';
 import { DetailHeader } from '@components/DetailHeader';
 import { CardSection } from '@components/SectionHeader';
 import { useThemeStore } from '@store/themeStore';
-import { useSalesOrderDetail } from '@hooks/useERP';
+import { useSalesOrderDetail, useAttachments } from '@hooks/useERP';
+import { AttachmentManager } from '@components/AttachmentManager';
 import { useResponsive } from '@hooks/useResponsive';
 import { useLocalSearchParams } from 'expo-router';
 import { formatCurrency, formatDate } from '@lib/format';
@@ -69,6 +70,11 @@ export default function SalesOrderDetailScreen() {
   }
 
   const order = orderQuery.data;
+
+  const attachmentsQuery = useAttachments('sales_order', order.id);
+  const onRefreshAttachments = React.useCallback(() => {
+    attachmentsQuery.refetch();
+  }, [attachmentsQuery]);
 
   return (
     <RoleGate minRank={navMinRank('sales-orders')}>
@@ -163,6 +169,17 @@ export default function SalesOrderDetailScreen() {
                   <Text style={[styles.summaryTotalValue, { color: colors.gold }]}>{formatCurrency(order.grand_total, order.currency)}</Text>
                 </View>
               </View>
+            </CardSection>
+          </Card>
+
+          <Card>
+            <CardSection title="Attachments">
+              <AttachmentManager
+                entityType="sales_order"
+                entityId={order.id}
+                attachments={attachmentsQuery.data ?? []}
+                onRefresh={onRefreshAttachments}
+              />
             </CardSection>
           </Card>
         </ScrollView>

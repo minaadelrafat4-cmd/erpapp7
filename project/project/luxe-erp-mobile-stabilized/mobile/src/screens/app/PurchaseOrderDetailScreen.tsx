@@ -17,7 +17,8 @@ import { StatusBadge } from '@components/StatusBadge';
 import { DetailHeader } from '@components/DetailHeader';
 import { CardSection } from '@components/SectionHeader';
 import { useThemeStore } from '@store/themeStore';
-import { usePurchaseOrderDetail } from '@hooks/useERP';
+import { usePurchaseOrderDetail, useAttachments } from '@hooks/useERP';
+import { AttachmentManager } from '@components/AttachmentManager';
 import { useResponsive } from '@hooks/useResponsive';
 import { useLocalSearchParams } from 'expo-router';
 import { formatCurrency, formatDate } from '@lib/format';
@@ -69,6 +70,11 @@ export default function PurchaseOrderDetailScreen() {
   }
 
   const po = poQuery.data;
+
+  const attachmentsQuery = useAttachments('purchase_order', po.id);
+  const onRefreshAttachments = React.useCallback(() => {
+    attachmentsQuery.refetch();
+  }, [attachmentsQuery]);
 
   return (
     <RoleGate minRank={navMinRank('purchase-orders')}>
@@ -160,6 +166,17 @@ export default function PurchaseOrderDetailScreen() {
                   <Text style={[styles.summaryTotalValue, { color: colors.gold }]}>{formatCurrency(po.grand_total, po.currency)}</Text>
                 </View>
               </View>
+            </CardSection>
+          </Card>
+
+          <Card>
+            <CardSection title="Attachments">
+              <AttachmentManager
+                entityType="purchase_order"
+                entityId={po.id}
+                attachments={attachmentsQuery.data ?? []}
+                onRefresh={onRefreshAttachments}
+              />
             </CardSection>
           </Card>
         </ScrollView>

@@ -16,6 +16,7 @@ import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
+import { ExportButton } from '@components/ExportButton';
 import { useThemeStore } from '@store/themeStore';
 import { useProducts, useCategories } from '@hooks/useERP';
 import type { SortOrder } from '@services/erpService';
@@ -171,16 +172,32 @@ export default function ProductsScreen() {
           onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
         />
 
-        <ClearFiltersButton
-          visible={debouncedSearch.trim() !== '' || selectedCategory !== null || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
-          onClear={() => {
-            setSearchText('');
-            setDebouncedSearch('');
-            setSelectedCategory(null);
-            setSortBy(DEFAULT_SORT_BY);
-            setSortOrder(DEFAULT_SORT_ORDER);
-          }}
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <ClearFiltersButton
+            visible={debouncedSearch.trim() !== '' || selectedCategory !== null || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+            onClear={() => {
+              setSearchText('');
+              setDebouncedSearch('');
+              setSelectedCategory(null);
+              setSortBy(DEFAULT_SORT_BY);
+              setSortOrder(DEFAULT_SORT_ORDER);
+            }}
+          />
+          <View style={{ flex: 1 }} />
+          <ExportButton
+            filename="products"
+            columns={[
+              { header: 'Name', accessor: (r: ProductListItem) => r.name },
+              { header: 'SKU', accessor: (r: ProductListItem) => r.sku ?? '' },
+              { header: 'Price', accessor: (r: ProductListItem) => r.price },
+              { header: 'Stock', accessor: (r: ProductListItem) => r.stock },
+              { header: 'Category', accessor: (r: ProductListItem) => r.category_name ?? '' },
+              { header: 'Active', accessor: (r: ProductListItem) => r.is_active ? 'Yes' : 'No' },
+            ]}
+            data={allProducts}
+            disabled={allProducts.length === 0}
+          />
+        </View>
 
         {/* Product List */}
         {showLoading && (

@@ -16,7 +16,8 @@ import { InfoRow, InfoGroup } from '@components/InfoRow';
 import { DetailHeader } from '@components/DetailHeader';
 import { CardSection } from '@components/SectionHeader';
 import { useThemeStore } from '@store/themeStore';
-import { useSupplierDetail } from '@hooks/useERP';
+import { useSupplierDetail, useAttachments } from '@hooks/useERP';
+import { AttachmentManager } from '@components/AttachmentManager';
 import { useResponsive } from '@hooks/useResponsive';
 import { useLocalSearchParams } from 'expo-router';
 import { formatDate } from '@lib/format';
@@ -68,6 +69,11 @@ export default function SupplierDetailScreen() {
   }
 
   const supplier = supplierQuery.data;
+
+  const attachmentsQuery = useAttachments('supplier', supplier.id);
+  const onRefreshAttachments = React.useCallback(() => {
+    attachmentsQuery.refetch();
+  }, [attachmentsQuery]);
 
   return (
     <RoleGate minRank={navMinRank('suppliers')}>
@@ -130,6 +136,17 @@ export default function SupplierDetailScreen() {
                   ))}
                 </View>
               )}
+            </CardSection>
+          </Card>
+
+          <Card>
+            <CardSection title="Attachments">
+              <AttachmentManager
+                entityType="supplier"
+                entityId={supplier.id}
+                attachments={attachmentsQuery.data ?? []}
+                onRefresh={onRefreshAttachments}
+              />
             </CardSection>
           </Card>
         </ScrollView>

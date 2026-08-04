@@ -15,6 +15,7 @@ import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
 import { RoleGate } from '@components/RoleGate';
+import { ExportButton } from '@components/ExportButton';
 import { useThemeStore } from '@store/themeStore';
 import { useInventory, useBranches, useWarehouses, useCategories } from '@hooks/useERP';
 import type { SortOrder } from '@services/erpService';
@@ -211,18 +212,35 @@ export default function InventoryScreen() {
             onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
           />
 
-          <ClearFiltersButton
-            visible={debouncedSearch.trim() !== '' || selectedBranch !== null || selectedWarehouse !== null || selectedCategory !== null || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
-            onClear={() => {
-              setSearchText('');
-              setDebouncedSearch('');
-              setSelectedBranch(null);
-              setSelectedWarehouse(null);
-              setSelectedCategory(null);
-              setSortBy(DEFAULT_SORT_BY);
-              setSortOrder(DEFAULT_SORT_ORDER);
-            }}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <ClearFiltersButton
+              visible={debouncedSearch.trim() !== '' || selectedBranch !== null || selectedWarehouse !== null || selectedCategory !== null || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+              onClear={() => {
+                setSearchText('');
+                setDebouncedSearch('');
+                setSelectedBranch(null);
+                setSelectedWarehouse(null);
+                setSelectedCategory(null);
+                setSortBy(DEFAULT_SORT_BY);
+                setSortOrder(DEFAULT_SORT_ORDER);
+              }}
+            />
+            <View style={{ flex: 1 }} />
+            <ExportButton
+              filename="inventory"
+              columns={[
+                { header: 'Product', accessor: (r: InventoryItemWithStatus) => r.product_name },
+                { header: 'SKU', accessor: (r: InventoryItemWithStatus) => r.sku ?? '' },
+                { header: 'On Hand', accessor: (r: InventoryItemWithStatus) => r.quantity_on_hand },
+                { header: 'Reserved', accessor: (r: InventoryItemWithStatus) => r.quantity_reserved },
+                { header: 'Available', accessor: (r: InventoryItemWithStatus) => r.available_stock },
+                { header: 'Branch', accessor: (r: InventoryItemWithStatus) => r.branch_name ?? '' },
+                { header: 'Warehouse', accessor: (r: InventoryItemWithStatus) => r.warehouse_name ?? '' },
+              ]}
+              data={filteredItems}
+              disabled={filteredItems.length === 0}
+            />
+          </View>
 
           {showLoading && (
             <View style={styles.centerState}>

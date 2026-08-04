@@ -90,6 +90,7 @@ export const NAV_ITEMS: NavItemConfig[] = [
 
   // Administration
   { key: 'settings', label: 'Settings', icon: 'gear', minRank: 20, group: 'administration', description: 'App and account settings' },
+  { key: 'audit-logs', label: 'Audit Logs', icon: 'history', minRank: 60, group: 'administration', description: 'System activity and change tracking' },
   { key: 'help', label: 'Help & Support', icon: 'question', minRank: 0, group: 'administration', description: 'Support and documentation' },
 ];
 

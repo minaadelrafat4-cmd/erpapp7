@@ -13,6 +13,7 @@ import { SearchBar } from '@components/SearchBar';
 import { ErrorState } from '@components/ErrorState';
 import { EmptyState } from '@components/EmptyState';
 import { RoleGate } from '@components/RoleGate';
+import { ExportButton } from '@components/ExportButton';
 import { useThemeStore } from '@store/themeStore';
 import { useReports } from '@hooks/useERP';
 import { useResponsive, getCardWidth } from '@hooks/useResponsive';
@@ -110,6 +111,22 @@ export default function ReportsScreen() {
         <AppHeader title="Reports" subtitle="Business reports" showBack showMenu />
         <View style={[styles.content, { paddingHorizontal: layout.padding, maxWidth: layout.contentMaxWidth, alignSelf: layout.isTablet ? 'center' : 'stretch' }]}>
           <SearchBar value={searchText} onChangeText={setSearchText} placeholder="Search reports…" />
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <View style={{ flex: 1 }} />
+            <ExportButton
+              filename="reports"
+              columns={[
+                { header: 'Name', accessor: (r: ReportListItem) => r.name },
+                { header: 'Type', accessor: (r: ReportListItem) => r.type },
+                { header: 'Description', accessor: (r: ReportListItem) => r.description ?? '' },
+                { header: 'Scheduled', accessor: (r: ReportListItem) => r.is_scheduled ? 'Yes' : 'No' },
+                { header: 'Last Run', accessor: (r: ReportListItem) => r.last_run_at ?? '' },
+              ]}
+              data={allItems}
+              disabled={allItems.length === 0}
+            />
+          </View>
 
           {showLoading && (
             <View style={styles.centerState}>

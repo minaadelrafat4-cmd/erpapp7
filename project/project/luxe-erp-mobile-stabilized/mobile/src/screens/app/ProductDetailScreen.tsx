@@ -18,7 +18,8 @@ import { CardSection } from '@components/SectionHeader';
 import { SummaryGrid } from '@components/SummaryGrid';
 import { StockBadge, getStockStatus } from '@components/StockBadge';
 import { useThemeStore } from '@store/themeStore';
-import { useProduct } from '@hooks/useERP';
+import { useProduct, useAttachments } from '@hooks/useERP';
+import { AttachmentManager } from '@components/AttachmentManager';
 import { useResponsive } from '@hooks/useResponsive';
 import { useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -65,6 +66,11 @@ export default function ProductDetailScreen() {
 
   const product = productQuery.data;
   const stockStatus = getStockStatus(product.stock, product.low_stock_threshold);
+
+  const attachmentsQuery = useAttachments('product', product.id);
+  const onRefreshAttachments = React.useCallback(() => {
+    attachmentsQuery.refetch();
+  }, [attachmentsQuery]);
 
   const handleShare = async () => {
     try {
@@ -182,6 +188,17 @@ export default function ProductDetailScreen() {
             </CardSection>
           </Card>
         )}
+
+        <Card>
+          <CardSection title="Attachments">
+            <AttachmentManager
+              entityType="product"
+              entityId={product.id}
+              attachments={attachmentsQuery.data ?? []}
+              onRefresh={onRefreshAttachments}
+            />
+          </CardSection>
+        </Card>
       </ScrollView>
     </ScreenWrapper>
   );

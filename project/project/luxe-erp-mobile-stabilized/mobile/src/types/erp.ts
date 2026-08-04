@@ -756,6 +756,49 @@ export interface StockTransferDetail {
 }
 
 // ============================================================
+// Audit Log Types
+// ============================================================
+
+export interface AuditLog {
+  id: string;
+  user_id: string | null;
+  user_email: string | null;
+  action: string;
+  module: string;
+  entity_id: string | null;
+  entity_type: string | null;
+  before_values: Record<string, unknown> | null;
+  after_values: Record<string, unknown> | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
+export interface AuditLogListResult {
+  items: AuditLog[];
+  nextCursor: string | null;
+}
+
+// ============================================================
+// File Attachment Types
+// ============================================================
+
+export type AttachmentEntityType = 'product' | 'supplier' | 'purchase_order' | 'sales_order' | 'employee';
+
+export interface FileAttachment {
+  id: string;
+  entity_type: AttachmentEntityType;
+  entity_id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  mime_type: string | null;
+  file_size: number | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
+// ============================================================
 // POS Types
 // ============================================================
 

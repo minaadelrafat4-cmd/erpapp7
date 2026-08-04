@@ -17,6 +17,7 @@ import { SearchBar } from '@components/SearchBar';
 import { FilterChips } from '@components/FilterChips';
 import { StatusBadge } from '@components/StatusBadge';
 import { SortControl, ClearFiltersButton, type SortOption } from '@components/SortControl';
+import { ExportButton } from '@components/ExportButton';
 import { useThemeStore } from '@store/themeStore';
 import { useSalesOrders } from '@hooks/useERP';
 import type { SortOrder } from '@services/erpService';
@@ -131,16 +132,31 @@ export default function SalesOrdersScreen() {
             onChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
           />
 
-          <ClearFiltersButton
-            visible={debouncedSearch.trim() !== '' || statusFilter !== 'all' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
-            onClear={() => {
-              setSearchText('');
-              setDebouncedSearch('');
-              setStatusFilter('all');
-              setSortBy(DEFAULT_SORT_BY);
-              setSortOrder(DEFAULT_SORT_ORDER);
-            }}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <ClearFiltersButton
+              visible={debouncedSearch.trim() !== '' || statusFilter !== 'all' || sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER}
+              onClear={() => {
+                setSearchText('');
+                setDebouncedSearch('');
+                setStatusFilter('all');
+                setSortBy(DEFAULT_SORT_BY);
+                setSortOrder(DEFAULT_SORT_ORDER);
+              }}
+            />
+            <View style={{ flex: 1 }} />
+            <ExportButton
+              filename="sales_orders"
+              columns={[
+                { header: 'Order #', accessor: (r: SalesOrderListItem) => r.order_number },
+                { header: 'Status', accessor: (r: SalesOrderListItem) => r.status },
+                { header: 'Payment', accessor: (r: SalesOrderListItem) => r.payment_status },
+                { header: 'Total', accessor: (r: SalesOrderListItem) => r.grand_total },
+                { header: 'Date', accessor: (r: SalesOrderListItem) => r.placed_at },
+              ]}
+              data={allOrders}
+              disabled={allOrders.length === 0}
+            />
+          </View>
 
           {showLoading && (
             <View style={styles.centerState}>

@@ -38,6 +38,10 @@ import {
   fetchUserSettings,
   updateUserSettings,
   changePassword,
+  fetchAuditLogs,
+  logAuditEntry,
+  fetchAttachments,
+  deleteAttachment,
   type SortOrder,
   type PurchaseOrderListParams,
   type SalesOrderListParams,
@@ -49,6 +53,8 @@ import {
   type TaskListParams,
   type StockTransferListParams,
   type UserSettings,
+  type AuditLogListParams,
+  type AuditLogListResult,
 } from '@services/erpService';
 import type {
   DashboardSummary,
@@ -87,6 +93,8 @@ import type {
   StockTransferListResult,
   StockTransferDetail,
   StockTransferStatus,
+  AuditLog,
+  FileAttachment,
 } from '@apptypes/erp';
 import type { Profile } from '@apptypes';
 import {
@@ -719,3 +727,58 @@ export function useCreatePOSOrder() {
 }
 
 export type { ReceivingListItem, ReceivingListResult, ReceivingDetail, TaskListItem, TaskListResult, TaskDetail, StockTransferListItem, StockTransferListResult, StockTransferDetail };
+
+// ============================================================
+// Audit Log Hooks
+// ============================================================
+
+export function useAuditLogs(search: string, module: string, action: string) {
+  return useInfiniteQuery<AuditLogListResult>({
+    queryKey: ['erp', 'audit-logs', search, module, action] as const,
+    queryFn: ({ pageParam }) =>
+      fetchAuditLogs({
+        search: search || undefined,
+        module: module || undefined,
+        action: action || undefined,
+        cursor: (pageParam as string | null) ?? null,
+        limit: APP_CONFIG.itemsPerPage,
+      } satisfies AuditLogListParams),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    staleTime: 30_000,
+  });
+}
+
+export function useLogAuditEntry() {
+  return async (entry: {
+    action: string;
+    module: string;
+    entity_id?: string | null;
+    entity_type?: string | null;
+    before_values?: Record<string, unknown> | null;
+    after_values?: Record<string, unknown> | null;
+  }): Promise<void> => {
+    await logAuditEntry(entry);
+    await queryClient.invalidateQueries({ queryKey: ['erp', 'audit-logs'] });
+  };
+}
+
+// ============================================================
+// File Attachment Hooks
+// ============================================================
+
+export function useAttachments(entityType: string, entityId: string | null) {
+  return useQuery<FileAttachment[]>({
+    queryKey: ['erp', 'attachments', entityType, entityId ?? ''] as const,
+    queryFn: () => cachedQuery(`attachments_${entityType}_${entityId}`, () => fetchAttachments(entityType, entityId!), 30_000),
+    enabled: !!entityId,
+    staleTime: 30_000,
+  });
+}
+
+export function useDeleteAttachment() {
+  return async (id: string, entityType: string, entityId: string): Promise<void> => {
+    await deleteAttachment(id);
+    await queryClient.invalidateQueries({ queryKey: ['erp', 'attachments', entityType, entityId] });
+  };
+}
